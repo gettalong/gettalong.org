@@ -1,0 +1,10 @@
+--- name:content
+{menu: {template: <%= context.ref_node.alcn %>, options: {limit: 5, and: posts}}}
+
+--- name:tag.menu
+<%
+template = context.ref_node.resolve('post.template')
+context[:nocontent] = true
+context[:nodes].each do |node| %>
+<%= context.render_block(name: "content", chain: [template, node]) %>
+<% end %>

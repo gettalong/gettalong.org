@@ -1,0 +1,29 @@
+---
+title: A Blog at Last
+description: How I started Blogging
+feature-image: typewriter.jpg
+created_at: 2016-09-03 20:39:00
+modified_at: 2016-09-03 20:39:00
+--- name:teaser
+
+I never really started blogging all these years although I developed a [static website
+generator][wg] and a [Markdown converter][kd] ages ago. Don't know why really... probably thought
+that I wouldn't find the time to actually post something.
+
+But now is always a better time to start than never, isn't it? :-)
+
+[wg]: /projects/webgen.html
+[kd]: /projects/kramdown.html
+
+--- name:content
+
+**What will I blog about?** Since I'm programming in my spare time I will write about programming
+and software engineering, especially in the context of the programming language Ruby. And probably
+about problem solving in general.
+
+**Why about Ruby?** It is the language I use nearly on a daily basis and therefore know most
+intimately. My open source projects use Ruby and can provide examples of real world code for
+discussion.
+
+I already have some ideas for posts about HexaPDF, my newest Ruby project, a full-featured PDF
+reader and writer.

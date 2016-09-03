@@ -1,0 +1,45 @@
+---
+title: kramdown
+description: Pure Ruby Markdown superset converter
+github: kramdown
+rubygem: true
+homepage: http://kramdown.gettalong.org
+image: kramdown.jpg
+active: maintained
+started: 2008-09-19
+sort_info: 90
+---
+
+kramdown is a fast, pure Ruby Markdown superset converter, using a strict syntax definition and
+supporting several common extensions.
+
+It is behind the conversion of the Markdown files for this website and many others. The popular
+static website generator [Jekyll] in version 3 also uses it as its default Markdown engine which
+incidentally means that [Github Pages] uses it, too.
+
+[Jekyll]: https://jekyllrb.com/
+[Github Pages]: https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0
+
+
+## History
+
+kramdown was developed because the maintainer of [Maruku], the best Markdown converter for Ruby in
+2008, didn't have time for Maruku anymore but there were still bugs in it. After looking at the code
+of Maruku it was clear that fixing the problems and adding additional functionality would probably
+mean a massive redesign.
+
+Therefore I developed kramdown from scratch, taking the best ideas from Maruku, like the [inline
+attribute lists][ial], and other Markdown implementations like [PHP Markdown Extra][phpmd].
+
+After about a year of development and once kramdown was in a usable state I released the first
+version 0.1.0 in November 2009. Since then major enhancements have been added and its functionality
+greatly extended.
+
+Finally, in March 2013 the first stable version 1.0.0 was released. The biggest change in this
+release was actually a change in the license, from GPL to MIT. Although repeatedly asked to do this
+I was initially reluctant. However, at that time there was a proliferation of Markdown converters
+for Ruby and to further adoption of kramdown the license changed was probably the right thing.
+
+[Maruku]: http://maruku.rubyforge.org/
+[ial]: http://kramdown.gettalong.org/syntax.html#inline-attribute-lists
+[phpmd]: https://michelf.ca/projects/php-markdown/extra/

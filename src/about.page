@@ -1,0 +1,51 @@
+---
+title: About
+in_menu: true
+sort_info: 5
+---
+
+I'm Thomas and this is my personal website where I write about **Ruby**, **programming**, **software
+engineering** and **solving problems**, among other things.
+
+I have written [**open source software**](projects.html) that is used daily by thousands of people.
+When I'm not programming in my spare time, I like to read science fiction books and seeing the
+world.
+
+If **you** are interested in Ruby or programming/software engineering in
+general, this website might prove interesting!
+
+Below you will find some information about why I'm programming and using Linux to do it.
+
+
+## Why Programming?
+
+My parents bought the first family computer when I was 10 years old, an IBM PS/1. Since we never had
+a Commodore 64, an Amiga or something similar, I couldn't do much with it at first. However, since
+my older brother had some experience with PCs, I watched him and learned.
+
+Not much later I could, for example, configure MS-DOS startup myself (remember HIMEM.SYS?) and got
+proficient with MS-DOS and Windows 3.10. And then I discovered QBASIC - my first programming
+language (if you don't count MS-DOS batch files).
+
+From then on I was hooked on programming, learned Pascal and Delphi, and with Delphi Windows API
+programming - fun times! So much to learn, so much to experiment with, so much time to do all this
+stuff!
+
+During my studies I was taught other programming languages like C, C++ and Java that all seemed...
+fine but after I discovered Ruby I knew what I would mainly use. So since about 2001 I'm programming
+in Ruby and never looked back - have a look at my [open source projects](projects.html) to see what
+I have been up to.
+
+
+## Why Linux?
+
+The first operating systems I used were MS-DOS and Windows 3.10. Windows 95 and then Windows XP were
+nice operating systems but after being exposed to SUSE Linux I switched to Linux, first SUSE, then
+RedHat, Gentoo, Mandriva, Debian, (some I have forgotten) and now I use Ubuntu for all my work.
+
+I had a MacBook Pro once but all I ever used for were applications designed for Linux that did what
+I wanted them to do and also showed what they did. In contrast the Mac OS X applications always did
+something and when everything went well, they worked fairly well. However, there were many times
+they didn't work well and you had no real chance of finding out *what exactly* went wrong.
+
+As for Windows 7: I use it sometimes at work when I don't have another choice.

@@ -1,0 +1,51 @@
+---
+title: webgen
+description: Fast, powerful and extensible static website generator
+github: webgen
+rubygem: true
+homepage: http://webgen.gettalong.org
+image: webgen.jpg
+active: maintained
+started: 2003-11-17
+sort_info: 95
+---
+
+webgen is a static website generator written in Ruby. Since its inception in 2003 it was constantly
+developed and enhanced and it powers this website.
+
+It is very flexible and customizable:
+
+* There is no need for a fixed directory structure and therefore one can easily embed the source of
+  a webgen website in a project repository (see [cmdparse's website source][cmdparse] for an
+  example).
+
+* Partial generation saves time by only regenerating the needed files.
+
+* No need to know Ruby to use nearly all of its functionality. YAML files are used for configuration
+  and to specify meta information, so non-programmers can easily learn to use it.
+
+It uses [cmdparse](cmdparse.html) for its command line client and [kramdown](kramdown.html) as the
+main markup language engine.
+
+[cmdparse]: https://github.com/gettalong/cmdparse/tree/master/doc
+
+
+## History
+
+I developed webgen out of the need of such a tool since back in 2003 my webspace only supported
+static files, not PHP or anything else. Initially I searched for such a tool but found nothing
+satisfying.
+
+As I have been using Ruby for some years I decided to write it myself in Ruby. After a short design
+phase I implemented the first version and it worked like charm.
+
+One can say that I became proficient in writing Ruby while developing webgen. Each major release,
+i.e. 0.1.0, 0.4.0, 0.5.0 and finally 1.0.0 had many breaking changes since the complete core was
+redesigned each time. Yes, one shouldn't do this and this probably also led to many people
+abandoning webgen. However, 0.x versions meant for me that I can do this and each iteration made the
+code better, clearer and easier to read and work with (Would *you* want to work with a plugin system
+based on `callcc`? Version 0.4.0 had one...).
+
+If you want more details on the history of webgen, read ["History of webgen"][history].
+
+[history]: http://webgen.gettalong.org/documentation/history.html

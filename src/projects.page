@@ -1,0 +1,24 @@
+---
+title: Projects
+in_menu: true
+sort_info: 3
+---
+{menu: {template: <%= context.ref_node.alcn %>, options: {alcn: /projects/**.html, not: {alcn: /projects/index*.html}, sort: true}}}
+
+--- name:tag.menu pipeline:erb
+<% context[:nodes].group_by {|node| node['active']}.each do |active, nodes| %>
+<section>
+  <h2><%= active.capitalize %> Projects</h2>
+  <div class="mini-posts">
+    <% nodes.each do |node| %>
+    <article class="mini-post">
+      <header>
+        <h3><%= context.dest_node.link_to(node) %></h3>
+        <p><%= node['description'] %></p>
+      </header>
+      <a href="<%= context.dest_node.route_to(node) %>" class="image"><img src="<%= context.dest_node.route_to(node.resolve(node['image'])) %>" alt="" /></a>
+    </article>
+    <% end %>
+  </div>
+</section>
+<% end %>

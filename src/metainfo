@@ -1,0 +1,16 @@
+--- paths
+[/**/*.woff, /**/*.woff2, /**/*.svg, /**/*.eot, /**/*.ttf]:
+  handler: copy
+
+--- alcn
+/**/*.html:
+  template: /templates/page.template
+
+/index.*.html:
+  template: /templates/posts.template
+
+/blog/**/*.html:
+  template: /templates/post.template
+
+/projects/**/*.html:
+  template: /templates/project.template

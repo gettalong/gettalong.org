@@ -1,0 +1,6 @@
+<article class="post">
+  <header>
+    <div class="title"><h2>{title: }</h2></div>
+  </header>
+  <webgen:block name="content" />
+</article>

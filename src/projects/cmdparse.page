@@ -1,0 +1,19 @@
+---
+title: cmdparse
+description: Advanced Ruby command line parser supporting nested commands
+github: cmdparse
+rubygem: true
+homepage: http://cmdparse.gettalong.org/
+image: cmdparse.jpg
+active: maintained
+started: 2004-09-22
+sort_info: 100
+---
+
+cmdparse allows the creation of "command style" programs, like `git` or `svn`, that perform different
+functions depending on which command is invoked. Additionally, nesting of commands, i.e. commands
+that take commands themselves, is also possible. For option parsing, the battle-tested Ruby standard
+library `optparse` is used.
+
+It was developed out of the need of a command style parsing library for [webgen](webgen.html). Since
+back then no useful library was available cmdparse was born.

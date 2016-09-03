@@ -1,0 +1,18 @@
+---
+title: ruby-amt
+description: Library for controlling Intel AMT devies via SOAP
+rubygem: true
+homepage: http://ruby-amt.rubyforge.org
+image: ruby-amt.jpg
+active: unmaintained
+started: 2009-09-19
+sort_info: 105
+---
+
+ruby-amt is a Ruby library for controlling Intel AMT (Active Management Technology) 5.0 devices
+(part of Intel vPro). It does this by implementing the client side of the SOAP protocol defined by
+Intel for Intel AMT devices.
+
+It works really well for AMT 5.0 devices. However, later version started to drop support for the
+SOAP protocol and rely on the WSMAN specification for API interaction, so ruby-amt cannot be used
+for those.

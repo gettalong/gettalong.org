@@ -1,0 +1,18 @@
+---
+template: page.template
+---
+<ul class="alt project-data">
+  <% if context.node['homepage'] %>
+  <li><span class="key icon fa-home">&nbsp;Homepage:</span> <span class="value"><a href="{homepage:}">{homepage: }</a></span></li>
+  <% end %>
+  <% if context.node['github'] %>
+  <li><span class="key icon fa-github">&nbsp;Source&nbsp;Code:</span> <span class="value"><a href="https://github.com/gettalong/{github:}">gettalong/{github:}</a></span></li>
+  <% end %>
+  <% if context.node['rubygem'] %>
+  <li><span class="key icon fa-archive">&nbsp;Rubygem:</span> <span class="value"><a href="https://rubygems.org/gems/{title:}">https://rubygems.org/gems/{title:}</a></span></li>
+  <% end %>
+  <li><span class="key icon fa-calendar">&nbsp;Project&nbsp;Start:</span> <span class="value">{date: {format: "%d. %B %Y", mi: started}}</span></li>
+  <li><span class="key icon fa-area-chart">&nbsp;Status:</span> <span class="value">{active:}</span></li>
+</ul>
+
+<webgen:block name="content" />
