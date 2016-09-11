@@ -20,6 +20,10 @@
 			margin: (_size(section-spacing) * -1) 0 _size(section-spacing) 0;
 			position: relative;
 			width: calc(100% + #{_size(section-spacing) * 2});
+			flex-direction: row;
+			background-size: calc(100% - 3em) calc(100% - 3em), cover;
+			background-repeat: no-repeat;
+			background-position: center;
 
 			.title {
 				@include vendor('flex-grow', '1');

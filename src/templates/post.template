@@ -1,6 +1,10 @@
 --- name:content
 <article class="post">
+  <% if context.node['feature-image'] %>
+  <header style="background-image: linear-gradient(rgba(255, 255, 255,0),rgba(255,255,255,0.9) 10%, rgba(255,255,255,0.9) 90%, rgba(255,255,255,0)), url(<%= context.dest_node.route_to(context.node.resolve("/blog/feature-images/#{context.node['feature-image']}")) %>)">
+  <% else %>
   <header>
+  <% end %>
     <div class="title">
       <h2><%= context.dest_node.link_to(context.node) %></h2>
       <p><%= context.node['description'] %></p>
@@ -9,9 +13,6 @@
       <time class="published" datetime="<%= context.node['created_at'].strftime("%FT%T%:z") %>"><%= context.node['created_at'].strftime("%d. %B %Y") %></time>
     </div>
   </header>
-  <% if context.node['feature-image'] %>
-  <a href="<%= context.dest_node.route_to(context.node) %>" class="image featured"><img src="<%= context.dest_node.route_to(context.node.resolve("/blog/feature-images/#{context.node['feature-image']}")) %>" alt="Feature image" /></a>
-  <% end %>
 	<webgen:block name="teaser" />
 	<% if !context[:nocontent] && context.node.blocks.key?('content') %><webgen:block name="content" /><% end %>
   <footer>
