@@ -1,0 +1,238 @@
+---
+title: Static Websites with webgen
+description: How to use webgen
+feature-image: ../../projects/webgen.jpg
+created_at: 2016-10-13 22:30:00 +02:00
+--- name:teaser
+
+The static website generator [webgen] has been in development for over a decade now. It provides the
+essential functionalities out of the box and is easy to use, even for non-programmers. Designed to
+be a general purpose static website generator it can be used for any kind of website, not just
+blogs.
+
+In this post I will show you how to create a basic website with webgen.
+
+[webgen]: http://webgen.gettalong.org
+
+--- name:content
+
+## First Steps
+
+As with most applications written in Ruby, webgen is just a `gem install webgen` away. After the
+installation, the `webgen` binary is used for everything, from creating the needed website structure
+to generating the output files (see `webgen help` for all available commands).
+
+When webgen is invoked in a directory that is not a valid webgen website, it tells you so:
+
+~~~
+$ webgen
+INFO  Generating website...
+INFO  No active source paths found - maybe not a webgen website?
+INFO  ... done in 0.02 seconds
+~~~
+
+So we need to create the website directory first. However, before we do that we install an extension
+bundle that provides some pre-built templates:
+
+~~~
+$ webgen install templates
+Installed webgen-templates-bundle
+~~~
+
+Now we create the website and populate it with the "andreas07" template:
+
+~~~
+$ webgen create website --template andreas07 demo -v
+INFO  [create] </>
+INFO  [create] </ext/>
+INFO  [create] </ext/init.rb>
+INFO  [create] </src/>
+INFO  [create] </src/andreas07.css>
+INFO  [create] </src/default.template>
+INFO  [create] </src/images/>
+INFO  [create] </src/images/bodybg.gif>
+INFO  [create] </src/images/sidebarbg.gif>
+INFO  [create] </webgen.config>
+Created a new webgen website in <demo> using the 'andreas07' template
+~~~
+
+By using the `-v` option webgen provides more output, in this case showing us the created files. We
+see that inside the `demo/` directory a `src/` directory was created with some files and the files
+`ext/init.rb` as well as `webgen.config`.
+
+
+## Website Structure
+
+The most important file for webgen is `webgen.config` because the existence of this file means that
+the directory contains a webgen website. This file is used for setting configuration values, like
+the main language or base URL of the website. To see the full list of available configuration
+options, use `webgen show config` or the [configuration reference][config] on the website.
+
+By default webgen expects all source files to be in the `src/` directory and puts the generated
+files into the `out/` directory. All temporary files are put into the `tmp/` directory (which can
+safely be deleted).
+
+The `ext/init.rb` file is for extending the functionality of webgen by writing Ruby code. It is not
+needed in many cases and can be deleted.
+
+
+[config]: http://webgen.gettalong.org/documentation/reference/configuration_options.html
+
+
+## Generating the Website and Adding Content
+
+Now that we have created the basic website structure we can use webgen to generate the output files:
+
+~~~
+$ cd demo
+$ webgen
+INFO  Generating website...
+INFO  [create] </>
+INFO  [create] </andreas07.css>
+INFO  [create] </images/>
+INFO  [create] </images/bodybg.gif>
+INFO  [create] </images/sidebarbg.gif>
+INFO  ... done in 0.02 seconds
+$ webgen
+INFO  Generating website...
+INFO  Nothing has changed since the last invocation!
+INFO  ... done in 0.02 seconds
+~~~
+
+As you can see webgen supports **partial website generation**, i.e. it only generates those files
+that have changed since the last invocation.
+
+You might have noticed that no HTML file was created. We will remedy the situation by creating a
+page file. **Page files** are those files of a webgen website that get transformed into HTML files.
+So we create the `src/index.page` file with some content and rerun webgen:
+
+~~~
+$ cat src/index.page
+\---
+title: Homepage
+in_menu: true
+\---
+# My Homepage
+This is the first page of my homepage!
+$ webgen
+INFO  Generating website...
+INFO  [update] </>
+INFO  [create] </index.html>
+INFO  ... done in 0.08 seconds
+~~~
+
+This file consists of two parts:
+
+* The first part is the **meta information section** where information about the page is defined. We
+  defined the title of the page and an additional meta information called `in_menu`.
+
+* The second part, after the second line containing `---`, is the content of the page file.
+
+All page files always have at least one content section but may have more, see the [Webgen Page
+Format][wpf] page for details.
+
+If you open the resulting `out/index.html` file in a browser you will see the following:
+
+![initial website page](assets/webgen-website-initial.png)
+{:.image.main}
+
+What we can see is that the page's content was transformed into HTML (see the middle part) and
+embedded into a template. This is the main purpose of every static website generator: Provide means
+for using other markup languages like Markdown to ease writing the content, and a templating system
+to avoid duplication of the main HTML markup that defines the layout and look of the site.
+
+So where is that template? It can be found in the source directory as the file
+`src/default.template`. Template files follow the same format as page files but most template files
+don't use the meta information section.
+
+If you look into this template file you will find that it contains a basic HTML structure with some
+additional un-HTML like statements:
+
+* Line 10 looks like this:
+
+  ~~~ html
+  <link rel="stylesheet" type="text/css" href="\{relocatable: andreas07.css}" media="screen,projection" />
+  ~~~
+
+  This would be as standard HTML `<link />` tag except for the value of the "href" attribute. The
+  contents is actually what is called a **webgen tag** which is a system for adding dynamic content
+  without programming.
+
+  Each tag has a name, in this case "relocatable", and may contain parameters, in this case
+  "andreas07.css". The ["relocatable" tag][tag rel] looks up its parameter in the tree of files
+  webgen knows about and creates a relative path to that file. This allows us to preview the
+  generated HTML file without a webserver because all generated links are relative.
+
+* Another webgen tag is found in line 19:
+
+  ~~~ html
+  \{menu: {options: {sort: true, mi: {in_menu: true}, absolute_levels: 1}}}
+  ~~~
+
+  This tag creates a [HTML menu][tag menu] by filtering the files webgen knows about using the given
+  options. In this case each menu entry needs to have the meta information "in_menu" set to "true"
+  (remember: we added that meta information to `src/index.page`) and it must be on level one in the
+  directory hierarchy.
+
+* The last line we look at is line 37:
+
+  ~~~ html
+  <webgen:block name="content" />
+  ~~~
+
+  This definitely does look more like an XML tag than an HTML tag. It is a [special tag][blocks]
+  that webgen recognizes and it means that the content should be placed here.
+
+If a page file doesn't specify a special template file using the ["template" meta information
+key][template], the default template is used. And templates themselves can even use other templates
+which is useful, for example, to embedded a post into a special post template that itself is
+embedded into the main template.
+
+And this is all you need for a basic website! Just add some more page files, fill them with content
+and you are good to go!
+
+
+[wpf]: http://webgen.gettalong.org/documentation/reference/webgen_page_format.html
+[tag rel]: http://webgen.gettalong.org/documentation/reference/extensions/tag/relocatable.html
+[tag menu]: http://webgen.gettalong.org/documentation/reference/extensions/tag/menu.html
+[blocks]: http://webgen.gettalong.org/documentation/reference/extensions/content_processor/blocks.html
+[template]: http://webgen.gettalong.org/documentation/reference/meta_information_keys.html#template
+
+
+## Conclusion
+
+By knowing about the [configuration file `webgen.config`][config], what [page] and
+[template][template file] files are and for what they are used, as well as the [webgen tag
+system][tags] you can create a basic website without knowing a programming language.
+
+If this short introduction roused your interest in webgen, have a look at the [webgen
+documentation][wd] to see what else is possible with webgen.
+
+You can also have a look at existing websites that are done with webgen to get inspiration:
+
+* Since the only file for a webgen website that has to exist is the configuration file, a webgen
+  website can easily be maintained next to the source code of a project. See the [website of
+  cmdparse][cmdparse] and the corresponding [webgen.config file][cmdparse-config] as an example.
+
+* webgen can also be used for more complex websites like the [website of webgen][webgen-source]
+  itself. This website uses some extensions in the `ext/` directory but most things are handled
+  through built-in features, e.g. the [sitemap], [RSS feeds] and the [automatic API documentation
+  generation][api].
+
+* [This website][blog-source] is also done with webgen and shows that simple blogs can be done with
+  webgen out of the box.
+
+
+[page]: http://webgen.gettalong.org/documentation/reference/extensions/path_handler/page.html
+[template file]: http://webgen.gettalong.org/documentation/reference/extensions/path_handler/template.html
+[tags]: http://webgen.gettalong.org/documentation/reference/extensions/content_processor/tags.html
+
+[wd]: http://webgen.gettalong.org/documentation/
+
+[cmdparse]: http://cmdparse.gettalong.org
+[cmdparse-config]: https://github.com/gettalong/cmdparse/blob/master/webgen.config
+[webgen-source]: https://github.com/gettalong/webgen-website
+[blog-source]: https://github.com/gettalong/gettalong.org
+[sitemap]: http://webgen.gettalong.org/documentation/reference/extensions/path_handler/sitemap.html
+[rss feeds]: http://webgen.gettalong.org/documentation/reference/extensions/path_handler/feed.html
+[api]: http://webgen.gettalong.org/documentation/reference/extensions/path_handler/api.html
