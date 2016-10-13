@@ -23,7 +23,7 @@
 			flex-direction: row;
 			background-size: calc(100% - 3em) calc(100% - 3em), cover;
 			background-repeat: no-repeat;
-			background-position: center;
+			background-position: center, top;
 
 			.title {
 				@include vendor('flex-grow', '1');
