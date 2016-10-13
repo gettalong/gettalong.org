@@ -15,7 +15,7 @@ link:
 <% context[:nodes].group_by {|node| node['created_at'].year}.sort {|a, b| a[0] <=> b[0]}.each do |year, nodes| %>
 <h2><%= year %></h2>
 <ul>
-<% nodes.sort {|a, b| a['created_at'] <=> b['created_at'] }.each do |node| %>
+<% nodes.sort {|a, b| b['created_at'] <=> a['created_at'] }.each do |node| %>
   <li>
     <span class="date"><%= node['created_at'].strftime("%d %b %Y") %></span> » <%= context.dest_node.link_to(node) %>
     <% if node['description'] %>(<%= node['description'] %>)<% end %>
