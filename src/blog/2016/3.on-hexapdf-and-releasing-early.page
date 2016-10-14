@@ -1,0 +1,93 @@
+---
+title: On HexaPDF and Releasing Early
+description: Why it depends on the situation whether releasing early is good
+feature-image: container-ship.jpg
+created_at: 2016-10-14 20:01:00 +02:00
+--- name:teaser
+
+After my [lightning talk][talk] about HexaPDF at [Euruko 2016] I was asked why I haven't released
+the source code to HexaPDF, yet. I have my reasons and in this post I will shed some light on them.
+
+[talk]: http://talks.gettalong.org/euruko2016
+[Euruko 2016]: http://euruko2016.org/
+
+--- name:content
+
+## Why Releasing Early is Good
+
+Many open source developers put their code online at very early stages of development in the hope
+that others are interested and contribute in one way or another. For example, this was done by Linus
+Torvalds when he announced the Linux kernel on a mailing list and many people got interested very
+fast.
+
+It totally makes sense to do this in many cases, for example, when you are not sure about the
+overall design of your library or application and need input from others, or when you are basically
+finished with the "core" and need input for more features.
+
+Releasing early often brings a new set of ideas to the table on how things could be done because
+there isn't so much code and changing it is easier.
+
+Whether people are interested in your code depends, naturally, on what the code does but if you put
+the code on Github or a similar service, announce it on appropriate websites, forums, mailings
+lists, etc., you will nearly always get some response and discussions.
+
+
+## ... Except When it is Not
+
+So how could this be a bad thing?
+
+If you release code at very early stages where many things already work but documentation is sparse
+and some things are still broken, you will inevitably find yourself answering questions on how to do
+certain things, responding to issues, commenting on pull requests...
+
+These tasks, while valueable to your project, take time away from actually developing your project.
+And what if you don't have much time for your project in the first place?
+
+You may suddenly find yourself in a situation where your project demands much more attention than
+you are able to give it which may lead to frustration on your side but will also frustrate people
+interested in the project.
+
+
+## So What About HexaPDF?
+
+A couple of years ago I needed to convert kramdown documents to PDF. First I used [wkhtmltopdf] and
+then [Prawn] for this task. However, while implementing the Prawn solution I found that Prawn lacked
+some features I liked to have.
+
+After first investigating whether patching Prawn would do the trick, I decided to look at the PDF
+specification to see what it would take to implement a PDF library from scratch. And so the idea for
+HexaPDF was born about three years ago.
+
+Since I didn't have the time to start development, I read the PDF specification and looked at many
+existing PDF libraries to see what features they had and how the libraries were designed. This gave
+me many ideas on how I wanted to design HexaPDF.
+
+About a year later, in September 2014, I started implementing HexaPDF. Since I knew the order in
+which I wanted to implement the various parts of the library and for most parts how I wanted to
+implement them, there was no need to release the code early to get feedback. So that bonus of
+releasing early wasn't really a bonus for me.
+
+Another reason why I didn't release the code was that I did all the development in my spare time.
+This meant for me that I could code whenever I wanted (or had time) and I didn't need to concern
+myself with what other people wanted or expected from me or the code. There were times in the last
+two years when I didn't write a single line of code for months and just pondered the design.
+
+I don't know yet whether HexaPDF will garner much interest in the Ruby community but since there are
+really only two libraries for working with PDFs, [Prawn] and [pdf-reader] (both of which implement
+not nearly all aspects of the PDF specification), I guess it will.
+
+Lastly, I hadn't decided on a license for HexaPDF and releasing the code without a license doesn't
+make much sense.
+
+So here they are, my reasons for not releasing the code to HexaPDF at an early stage. I know that
+many probably won't agree with my reasons but for me it provided me with the time and space to
+really enjoy working on HexaPDF and the challenges that came with it.
+
+One question still remains: When will HexaPDF be released? The code itself will be released soon,
+but the **[HexaPDF website]** containing example scripts and their resulting PDF output as well as
+the API documentation is available *now*.
+
+[Prawn]: http:prawnpdf.org
+[pdf-reader]: https://github.com/yob/pdf-reader
+[wkhtmltopdf]: http://wkhtmltopdf.org/
+[HexaPDF website]: http://hexapdf.gettalong.org
