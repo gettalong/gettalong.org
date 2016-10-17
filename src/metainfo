@@ -1,5 +1,5 @@
 --- paths
-[/**/*.woff, /**/*.woff2, /**/*.svg, /**/*.eot, /**/*.ttf]:
+[/**/*.woff, /**/*.woff2, /**/*.svg, /**/*.eot, /**/*.ttf, /.htaccess]:
   handler: copy
 
 --- alcn
