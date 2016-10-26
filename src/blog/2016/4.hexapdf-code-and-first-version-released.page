@@ -1,0 +1,47 @@
+---
+title: HexaPDF Code and First Version Released
+description: After two years in the making HexaPDF is brought into daylight
+feature-image: mountain-sunrise.jpg
+created_at: 2016-10-26 12:31:00 +02:00
+--- name:teaser
+
+As of today the [HexaPDF] source code is available on [Github] and the first version has been
+[released].
+
+[Github]: https://github.com/gettalong/hexapdf
+[released]: https://rubygems.org/gems/hexapdf
+[HexaPDF]: http://hexapdf.gettalong.org
+
+--- name:content
+
+HexaPDF is a pure Ruby library with an accompanying application for working with PDF files. In
+short, it allows
+
+* **creating** new PDF files,
+* **manipulating** existing PDF files,
+* **merging** multiple PDF files into one,
+* **extracting** meta information, text, images and files from PDF files,
+* **securing** PDF files by encrypting them and
+* **optimizing** PDF files for smaller file size or other criteria.
+
+HexaPDF was designed with ease of use and performance in mind. It uses lazy loading and lazy
+computing when possible and tries to produce small PDF files by default.
+
+The initial version provides the basic functionalities for reading and writing PDFs as well as
+low-level support for creating PDFs. You can find some code examples on how to use the library on
+the [HexaPDF website].
+
+The command line application currently provides commands for
+
+* getting general information about a PDF file,
+* extracting files from a PDF file,
+* modifying a PDF file (file size optimization, decryption, encryption, page selection and page
+  rotation),
+* and for inspecting the internal objects and streams of a PDF file.
+
+In the future the application will provide the full range of standard PDF operations. This means,
+for example, that commands for merging and splitting will be added.
+
+
+
+[HexaPDF website]: http://hexapdf.gettalong.org
