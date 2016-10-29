@@ -1,0 +1,26 @@
+---
+title: HexaPDF
+description: A Versatile PDF Creation and Manipulation Library For Ruby
+github: hexapdf
+rubygem: true
+homepage: http://hexapdf.gettalong.org
+image: hexapdf.jpg
+active: maintained
+started: 2014-08-30
+sort_info: 85
+---
+
+HexaPDF is a pure Ruby library with an accompanying application for working with PDF files. In
+short, it allows
+
+* **creating** new PDF files,
+* **manipulating** existing PDF files,
+* **merging** multiple PDF files into one,
+* **extracting** meta information, text, images and files from PDF files,
+* **securing** PDF files by encrypting them and
+* **optimizing** PDF files for smaller file size or other criteria.
+
+HexaPDF was designed with ease of use and performance in mind. It uses lazy loading and lazy
+computing when possible and tries to produce small PDF files by default.
+
+It uses [cmdparse](cmdparse.html) for its command line application.
