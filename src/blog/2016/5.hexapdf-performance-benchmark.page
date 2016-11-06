@@ -1,0 +1,319 @@
+---
+title: HexaPDF Performance Benchmark
+description: A look at how the HexaPDF application performs in respect to others
+feature-image: ../../projects/hexapdf.jpg
+created_at: 2016-11-06 13:22:00 +01:00
+--- name:teaser
+
+My pure Ruby PDF library [HexaPDF] contains an application for working with PDFs. In this post I
+look at how this application performs in comparison to other such applications.
+
+[HexaPDF]: http://hexapdf.gettalong.org
+
+--- name:content
+
+## About PDF Optimization
+
+Although the `hexapdf` application can perform various commands, for example displaying information
+about a PDF file, modifying a PDF file or extracting files from a PDF file, I will concentrate on
+the command to modify a PDF file.
+
+One of the ways to use this command is to optimize a PDF file in terms of its file size. This
+involves reading and writing the PDF file and performing the optimization. Sometimes the word
+"optimization" is used when a PDF file is linearized for faster display on web sites. Here I always
+mean file size optimization.
+
+There are various ways to optimize the file size of a PDF file and they can be divided into two
+groups: lossless and lossy operations. Since all used applications perform only lossless
+optimizations, I only look at those:
+
+Removing unused and deleted objects
+
+: A PDF file can store multiple revisions of an object but only the last one is used. So all other
+  versions can safely be deleted.
+
+Using object and cross-reference streams
+
+: A PDF file can be thought of as a collection of random-access objects that are stored sequentially
+  in an ASCII-based format. Object streams take those objects and store them compressed in a binary
+  format. And cross-reference streams stores the file offsets to the objects in a compressed manner,
+  instead of the standard ASCII-based format.
+
+Recompressing page content streams
+
+: The content of a PDF page is described in an ASCII-based format. Some PDF producers don't optimize
+  their output which can lead to bigger than necessary content streams or don't store it in a
+  compressed format.
+
+There are some more techniques for reducing the file size like font subsetting/merging/deduplication
+or object and image deduplication. However, those are rather advanced and not implemented in most
+PDF libraries because it is hard to get them right.
+
+
+## Benchmark Setup
+
+There are many applications that can perform some or all of the optimizations mentioned above. Since
+I'm working on Linux I will use applications that are readily available on this platform and which
+are command line applications.
+
+Since the abilities of the applications vary, following is a table of keys used to describe the
+various operations:
+
+| Key | Operation |
+|-----------------|
+| C   | Compacting by removing unused and deleted objects |
+| S   | Usage of object and cross-reference streams |
+| P   | Recompression of page content streams |
+
+The list of the benchmarked applications:
+
+**hexapdf**
+
+: Homepage: <http://hexapdf.gettalong.org>\\
+  Version: Latest version in [Github repository](https://github.com/gettalong/hexapdf) \\
+  Abilities: Any combination of C, S and P
+
+  `hexapdf` is used multiple times, with increasing level of compression, with the following
+  commands:
+
+  | hexapdf | `hexapdf modify -f input.pdf --no-compact output.pdf` |
+  | hexapdf&nbsp;C | `hexapdf modify -f input.pdf --compact output.pdf` |
+  | hexapdf&nbsp;CS | `hexapdf modify -f input.pdf --compact --object-streams generate output.pdf` |
+  | hexapdf&nbsp;CSP | `hexapdf modify -f input.pdf --compact --object-streams generate --compress-pages output.pdf` |
+
+**pdftk**
+
+: Homepage: <https://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/>\\
+  Version: 2.02\\
+  Abilities: C
+
+  `pdftk` is probably the best known application because, like `hexapdf` it allows for many
+  different operations on PDFs. It is based on the Java iText library which has been compiled to
+  native code using GCJ.
+
+  The application doesn't have options for optimizing a PDF file but it can be assumed that it
+  removes unused and deleted objects.
+
+  It is used in the benchmark like this:
+
+  | pdftk C | `pdftk input.pdf output output.pdf` |
+
+**qpdf**
+
+: Homepage: <http://qpdf.sourceforge.net/>\\
+  Version: 6.0.0\\
+  Abilities: C, CS
+
+  QPDF is a command line application for transforming PDF file written in C++ and it is used like
+  this:
+
+  | qpdf C | `qpdf input.pdf output.pdf` |
+  | qpdf CS | `qpdf --object-streams=generate input.pdf output.pdf` |
+
+**smpdf**
+: Homepage: <http://www.coherentpdf.com/compression.html>\\
+  Version: 1.4.1\\
+  Abilities: CSP
+
+  This is a commercial application but can be used for evaluation purposes. The application is
+  probably written in OCaml since it uses the [CamlPDF library][CamlPDF].
+
+  There is no way to configure the operations done but judging from its output it seems it does all
+  of the lossless operations:
+
+  | smpdf CSP | `smpdf input.pdf -o output.pdf` |
+
+[CamlPDF]: http://www.github.com/johnwhitington/camlpdf
+[HexaPDF]: http://hexapdf.gettalong.org
+
+Apart from `hexapdf` all other applications are native binaries, compiled to machine code.
+
+The files used in the benchmark vary in file size and internal structure:
+
+| Name      |        Size |  Objects |  Pages | Details |
+|-----------|------------:|---------:|-------:|----------|
+| **a.pdf** |      53.056 |       36 |      4 | created by Prawn |
+| **b.pdf** |  11.520.218 |    4.161 |    439 | many non-stream objects |
+| **c.pdf** |  14.399.980 |    5.263 |    620 | linearized, many streams |
+| **d.pdf** |   8.107.348 |   34.513 |     20 | |
+| **e.pdf** |  21.788.087 |    2.296 |     52 | huge content streams, many pictures, object streams, encrypted with default password |
+| **f.pdf** | 154.752.614 |  287.977 | 28.365 | *very* big file |
+
+The benchmark script is a simple Bash script that uses standard Linux CLI tools for measuring the
+execution time and memory usage:
+
+~~~ shell
+#/bin/bash
+
+OUT_FILE=/tmp/bench-result.pdf
+
+trap exit 2
+
+function bench_file() {
+  cmdname=$1
+  FORMAT="| %-20s | %'6ims | %'7iKiB | %'11i |\n"
+  shift
+
+  time=$(date +%s%N)
+  /usr/bin/time -f '%M' -o /tmp/bench-times "$@" &>/dev/null
+  if [ $? -ne 0 ]; then
+    cmdname="ERR ${cmdname}"
+    time=0
+    mem_usage=0
+    file_size=0
+  else
+    time=$(( ($(date +%s%N)-time)/1000000 ))
+    mem_usage=$(cat /tmp/bench-times)
+    file_size=$(stat -c '%s' $OUT_FILE)
+  fi
+  printf "$FORMAT" "$cmdname" "$time" "$mem_usage" "$file_size"
+}
+
+cd $(dirname $0)
+FILES=(*.pdf)
+if [ $# -ne 0 ]; then FILES=("$@"); fi
+
+for file in "${FILES[@]}"; do
+  file_size=$(printf "%'i" $(stat -c '%s' "$file"))
+  echo "|------------------------------------------------------------|"
+  printf "| %-20s |     Time |     Memory |   File size |\n" "$file ($file_size)"
+  echo "|------------------------------------------------------------|"
+  bench_file "hexapdf "    ruby -I../lib ../bin/hexapdf modify -f "${file}" --no-compact ${OUT_FILE}
+  bench_file "hexapdf C"   ruby -I../lib ../bin/hexapdf modify -f "${file}" --compact ${OUT_FILE}
+  bench_file "hexapdf CS"  ruby -I../lib ../bin/hexapdf modify -f "${file}" --compact --object-streams generate ${OUT_FILE}
+  bench_file "hexapdf CSP" ruby -I../lib ../bin/hexapdf modify -f "${file}" --compact --object-streams generate --compress-pages ${OUT_FILE}
+  bench_file "pdftk C"    pdftk "${file}" output ${OUT_FILE}
+  bench_file "qpdf C"      qpdf "${file}" ${OUT_FILE}
+  bench_file "qpdf CS"     qpdf "${file}" --object-streams=generate ${OUT_FILE}
+  bench_file "smpdf CSP"   smpdf "${file}" -o ${OUT_FILE}
+  echo "|------------------------------------------------------------|"
+  echo
+done
+~~~
+
+
+## Benchmark Results
+
+Here are the results of running the benchmark script on all the PDF files. You will find comments on
+the results are afterwards:
+
+~~~
+|------------------------------------------------------------|
+| a.pdf (53,056)       |     Time |     Memory |   File size |
+|------------------------------------------------------------|
+| hexapdf              |    146ms |  16,012KiB |      52,338 |
+| hexapdf C            |    181ms |  16,332KiB |      52,315 |
+| hexapdf CS           |    192ms |  16,992KiB |      49,181 |
+| hexapdf CSP          |    200ms |  17,872KiB |      48,251 |
+| pdftk C              |     55ms |  53,384KiB |      53,144 |
+| qpdf C               |     12ms |   4,568KiB |      53,179 |
+| qpdf CS              |     15ms |   4,652KiB |      49,287 |
+| smpdf CSP            |     20ms |   8,136KiB |      48,329 |
+|------------------------------------------------------------|
+
+|------------------------------------------------------------|
+| b.pdf (11,520,218)   |     Time |     Memory |   File size |
+|------------------------------------------------------------|
+| hexapdf              |  1,012ms |  32,736KiB |  11,464,892 |
+| hexapdf C            |  1,062ms |  35,212KiB |  11,415,701 |
+| hexapdf CS           |  1,091ms |  37,472KiB |  11,101,448 |
+| hexapdf CSP          |  9,570ms |  86,920KiB |  11,085,158 |
+| pdftk C              |    466ms |  68,532KiB |  11,501,669 |
+| qpdf C               |    581ms |  11,840KiB |  11,500,308 |
+| qpdf CS              |    700ms |  11,948KiB |  11,124,779 |
+| smpdf CSP            |  3,379ms |  51,648KiB |  11,092,428 |
+|------------------------------------------------------------|
+
+|------------------------------------------------------------|
+| c.pdf (14,399,980)   |     Time |     Memory |   File size |
+|------------------------------------------------------------|
+| hexapdf              |  2,207ms |  46,624KiB |  14,519,207 |
+| hexapdf C            |  2,225ms |  46,640KiB |  14,349,008 |
+| hexapdf CS           |  2,396ms |  55,180KiB |  13,185,262 |
+| hexapdf CSP          | 10,543ms | 106,448KiB |  13,111,094 |
+| pdftk C              |  1,625ms | 100,648KiB |  14,439,611 |
+| qpdf C               |  1,730ms |  34,840KiB |  14,432,647 |
+| qpdf CS              |  2,103ms |  35,348KiB |  13,228,102 |
+| smpdf CSP            |  3,117ms |  76,440KiB |  13,076,598 |
+|------------------------------------------------------------|
+
+|------------------------------------------------------------|
+| d.pdf (8,107,348)    |     Time |     Memory |   File size |
+|------------------------------------------------------------|
+| hexapdf              |  6,115ms | 110,760KiB |   7,774,817 |
+| hexapdf C            |  5,825ms |  92,952KiB |   7,036,577 |
+| hexapdf CS           |  6,352ms |  86,860KiB |   6,539,334 |
+| hexapdf CSP          |  6,499ms |  96,264KiB |   5,599,758 |
+| pdftk C              |  2,232ms | 102,276KiB |   7,279,035 |
+| qpdf C               |  3,153ms |  40,568KiB |   7,209,305 |
+| qpdf CS              |  3,197ms |  40,360KiB |   6,703,374 |
+| smpdf CSP            |  2,922ms |  80,288KiB |   5,528,352 |
+|------------------------------------------------------------|
+
+|------------------------------------------------------------|
+| e.pdf (21,788,087)   |     Time |     Memory |   File size |
+|------------------------------------------------------------|
+| hexapdf              |    882ms |  52,736KiB |  21,784,732 |
+| hexapdf C            |  1,172ms |  99,924KiB |  21,850,715 |
+| hexapdf CS           |  1,139ms | 101,952KiB |  21,769,651 |
+| hexapdf CSP          | 36,015ms | 201,240KiB |  21,195,877 |
+| pdftk C              |    694ms | 122,920KiB |  21,874,883 |
+| qpdf C               |  1,391ms |  64,144KiB |  21,802,439 |
+| qpdf CS              |  1,443ms |  64,588KiB |  21,787,558 |
+| smpdf CSP            | 38,209ms | 646,888KiB |  21,188,516 |
+|------------------------------------------------------------|
+
+|------------------------------------------------------------|
+| f.pdf (154,752,614)  |     Time |     Memory |   File size |
+|------------------------------------------------------------|
+| hexapdf              | 60,135ms | 575,172KiB | 154,077,468 |
+| hexapdf C            | 65,187ms | 580,344KiB | 153,946,077 |
+| hexapdf CS           | 71,495ms | 715,720KiB | 117,642,988 |
+| ERR hexapdf CSP      |      0ms |       0KiB |           0 |
+| pdftk C              | 30,563ms | 682,044KiB | 157,850,354 |
+| qpdf C               | 36,736ms | 485,060KiB | 157,723,936 |
+| qpdf CS              | 41,945ms | 487,516KiB | 118,114,521 |
+| ERR smpdf CSP        |      0ms |       0KiB |           0 |
+|------------------------------------------------------------|
+~~~
+
+Some comments:
+
+* **HexaPDF in CSP mode produces the smallest PDF in three cases and is second in the other three**
+  cases where `smpdf` is the best compressor. However, since the difference in files sizes are
+  marginal, HexaPDF and `smpdf` can be considered equal.
+
+* When page compression is activated, HexaPDF is much slower but this is expected since each content
+  stream has to be parsed and serialized.
+
+* `pdftk` is the fastest application except for the a.pdf file. And in all cases but a.pdf **HexaPDF
+  in CS mode is only up to three times slower**. This is rather good considering HexaPDF is written
+  in Ruby while all applications are compiled binaries.
+
+  The benchmark for a.pdf is a bit of an outlier because startup time greatly affects the result in
+  HexaPDF's case.
+
+* **Looking at the memory usage, HexaPDF also fares quite well compared to C++ based `qpdf`**. And
+  it uses less memory than `pdftk` in all cases except f.pdf!
+
+* There is one case where HexaPDF uses the least amount of memory, namely for e.pdf without any
+  special operations done. The reason for this is that HexaPDF applies stream filters only when
+  necessary.
+
+  This means for e.pdf that HexaPDF doesn't decrypt and encrypt any stream if not necessary while
+  all the other applications seem to do so, leading to higher memory usage.
+
+
+## Summary
+
+The HexaPDF library is already quite optimized in terms of performance and memory usage. It is only
+up to three times slower than solutions in compiled languages and doesn't use much memory. There are
+still some things that I think can make HexaPDF perform better and I will look into them in the
+future.
+
+Also, compared to other Ruby solutions like [origami] or [combine_pdf], HexaPDF uses less memory and
+is always at least two times faster. So I think that HexaPDF is currently the way to go if one needs
+to work with PDFs in Ruby.
+
+[origami]: https://github.com/gdelugre/origami
+[combine_pdf]: https://github.com/boazsegev/combine_pdf
