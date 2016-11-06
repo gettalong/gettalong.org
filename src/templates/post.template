@@ -1,7 +1,7 @@
 --- name:content
 <article class="post">
   <% if context.node['feature-image'] %>
-  <header style="background-image: linear-gradient(rgba(255, 255, 255,0),rgba(255,255,255,0.9) 10%, rgba(255,255,255,0.9) 90%, rgba(255,255,255,0)), url(<%= context.dest_node.route_to(context.node.resolve("/blog/feature-images/#{context.node['feature-image']}")) %>)">
+  <header style="background-image: linear-gradient(rgba(255, 255, 255,0.9),rgba(255,255,255,0.9)), url(<%= context.dest_node.route_to(context.node.resolve("/blog/feature-images/#{context.node['feature-image']}")) %>)">
   <% else %>
   <header>
   <% end %>
