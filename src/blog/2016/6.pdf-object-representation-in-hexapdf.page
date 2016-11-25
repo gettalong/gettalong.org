@@ -1,0 +1,188 @@
+---
+title: PDF Object Representation in HexaPDF
+description: Part of the series on the HexaPDF implementation
+feature-image: objects.jpg
+created_at: 2016-11-25 17:29:00 +01:00
+link:
+  javascript: /assets/asciicast/asciinema-player.js
+  css: /assets/asciicast/asciinema-player.css
+--- name:teaser
+
+To work with PDFs using a library means that you need to understand at least the part of the PDF
+specification that is about the PDF object system. This post will introduce this part and then look
+at how [HexaPDF] implements it.
+
+[HexaPDF]: http://hexapdf.gettalong.org
+
+--- name:content
+
+## The PDF File Format - A Short Introduction
+
+If you look at a PDF file using a text editor (e.g. `vi -b`) you will find **ASCII text intermingled
+with binary data**. The reason for this is that the basic structure of a PDF is defined using ASCII
+characters. It is even possible to create a PDF using only ASCII characters, although it will be
+bigger than necessary.
+
+A PDF file basically consists of four parts:
+
+**Header**
+: The header defines the PDF version and may contain binary bytes to indicate that the PDF contains
+  binary data.
+
+**Body**
+: The body contains the real data of the PDF file in so called "indirect objects", see below.
+
+**Cross-Reference Table**
+: The cross-reference table contains information that allows accessing an indirect object directly,
+  without scanning the whole file.
+
+**File Trailer**
+: This last part contains information to find the cross-reference table and certain other important
+  objects.
+
+You may have noticed that I have written about "objects" that are inside the PDF file. The reason
+for this is that PDF has the notion of objects of various types:
+
+* **Booleans**: Represented by `true` and `false`
+* **Numerics**: Integers like `123` and floats like `123.45`
+* **Strings**: May be serialized as literal strings using parentheses, e.g. `(Test)`, or
+  hexadecimal strings using angle brackets, e.g. `<ABCDEF>`; also supports binary strings.
+* **Names**: Work like symbols in Ruby; represented by prefixing a slash to the name, e.g.
+  `/Name`
+* **Arrays**: Represented by using brackets around the values, e.g. `[123 (Test) /Name]`
+* **Dictionaries**: Like hashes in Ruby but can only have name objects as keys; represented by
+  double angle brackets where each key is followed by its value, e.g. `<</Key (Value) /AnotherKey
+  12345>>`
+* **Null**: Like nil in Ruby; represented by `null`
+* **Streams**: A sequence of potentially unlimited bytes; represented as a dictionary followed by
+  `stream\n...stream bytes...\nendstream`; always has to be an indirect object and may be filtered
+* **Indirect objects**: An object of any of the above types that is additionally assigned an object
+  identifier consisting of an object number (a positive integer) and a generation number (a
+  non-negative integer); represented like this: `4 0 obj (SomeObject) endobj`; can be referenced
+  from another object like this: `4 0 R`
+
+Knowing the above it is possible to get any indirect object:
+
+* First the PDF header is checked whether the PDF version is supported.
+* Then the end of the file is inspected to find the file trailer and the position of the
+  cross-reference table.
+* The cross-reference table is searched for the position of the indirect object that should be read.
+* Finally, the found position is used to read the indirect object.
+
+The first two steps only need to be done once whereas the last two steps need to be done for each
+indirect object.
+
+While this gives you access to any indirect object, the meaning of this indirect object may not be
+apparent. This is where the file trailer dictionary comes in: It provides named references to the
+most important objects. They in turn reference other objects and so on, building an object graph.
+Like the file trailer, the most important parts of a PDF are built with dictionaries, for example
+pages, fonts and annotations.
+
+This all is very abstract, so let's use the `hexapdf inspect` command to inspect a PDF file and show
+the file trailer and some objects. The option `-o` is used for showing an indirect object and `-s`
+for showing raw or unfiltered stream data:
+
+<asciinema-player src="assets/hexapdf-inspect.json" cols="100" rows="29" speed="2"></asciinema-player>
+
+
+## HexaPDF Implementation of the PDF Object Types
+
+Now that you know the basics of the PDF file format, I can move on to describing HexaPDF's
+implementation of it.
+
+First and foremost, **nearly all object types can and are mapped directly to one of Ruby's built-in
+types**, only stream and indirect objects need custom implementations (see [HexaPDF::Stream] and
+[HexaPDF::Object]). On the one hand, this makes working with PDF objects very easy since you can
+just use the normal Ruby data structures. And on the other hand it has benefits in regards to memory
+usage and execution performance.
+
+Since **the PDF dictionary is the most important type**, there is a wrapper class
+[HexaPDF::Dictionary] which provides convenience methods. For example, accessing a value
+automatically dereferences it so that not the reference itself is returned, but the indirect object
+it references.
+
+This certainly increases memory usage but allows HexaPDF to do something else, too, namely
+**automatic mapping of PDF objects to specific subclasses of HexaPDF::Dictionary**. For example, a
+page object is a PDF dictionary and would normally be represented by HexaPDF::Dictionary. However,
+since there is a more specific subclass [HexaPDF::Type::Page] registered for it, this subclass is
+used.
+
+Internally, this is made possible by a HexaPDF::Object not actually storing the indirect object's
+data but just a [HexaPDF::PDFData] object that holds everything related to an indirect object. So it
+doesn't matter whether a HexaPDF::Object or a HexaPDF::Type::Page object is used as wrapper as long
+as they use the same HexaPDF::PDFData object. Again, this increases memory usage but the gains are
+worth it.
+
+This mapping is done automatically behind the scenes and can be configured via the global
+configuration object (see [HexaPDF::GlobalConfiguration]).
+
+The PDF format also provides the ability to access a specific indirect object without loading any
+other. This feature is used by HexaPDF so that indirect objects are loaded only when they are
+accessed, i.e. it provides **lazy loading of indirect objects**. This provides performance and
+memory benefits. However, there is currently one suboptimal part in this process: The whole
+cross-reference table is loaded after loading a PDF document. This doesn't matter for small PDF
+files but for files with tens of thousands of objects there can be a rather large delay. I intend to
+address this problem in the future.
+
+In the context of stream objects, the unfiltered stream data (i.e. after decompression) can amount
+to many mebibytes. Therefore the **stream data itself is also lazily loaded**: Only when the stream
+data is needed it is read and unfiltered.
+
+Everything mentioned above allows you to work with a [HexaPDF::Document] and its objects in a very
+straight-forward way. As an example, the following code creates a new PDF document and assembles a
+page dictionary manually that is then added to the document's page tree:
+
+~~~ ruby
+require 'hexapdf'
+
+doc = HexaPDF::Document.new
+page = doc.add(Type: :Page, MediaBox: [0, 0, 100, 100])
+page.contents = "0 0 m 100 100 l S"
+doc.pages << page
+doc.write("sample.pdf")
+~~~
+
+Note that the `doc.add(...)` call actually returns a page object and not a simple dictionary,
+allowing the use of the `#contents` methods.
+
+One thing to note, though, is that not all special PDF dictionaries have a subclass counterpart in
+HexaPDF. There are, among others, subclasses for page objects, the main catalog object and the
+trailer. However, this apparent lack doesn't prevent you from working with these special PDF
+dictionaries, it just means that you need to know the various needed keys yourself. For example,
+there is currently no subclass for transition dictionaries (see section 12.4.4.1 in the PDF 1.7
+specification) but we can still make use of them using plain Ruby objects:
+
+~~~ ruby
+require 'hexapdf'
+
+doc = HexaPDF::Document.new
+doc.pages.add
+second_page = doc.pages.add
+third_page = doc.pages.add
+second_page.canvas.line_width(20).stroke_color(255, 0, 0).line(0, 0, 400, 400).stroke
+third_page.canvas.line_width(20).stroke_color(0, 255, 0).line(0, 400, 400, 0).stroke
+second_page[:Trans] = \{Type: :Trans, S: :Split, D: 5, Dm: :V}
+third_page[:Trans] = \{Type: :Trans, S: :Blinds, Dm: :H}
+doc.write("sample.pdf")
+~~~
+
+Open the resulting PDF file, switch to presentation mode and move to the second and third pages.
+Your viewing application, if it is compatible, will show you transitions between the pages.
+
+
+## Conclusion
+
+This post introduced the PDF object system and how it is implemented in HexaPDF. As you have seen
+HexaPDF provides a very Ruby-like interface for working with the PDF object system while still
+trying to be as memory efficient and high-performance as possible.
+
+In a future post I will show you how HexaPDF's implementation of stream filters work and why Ruby's
+Fiber objects are essential for it.
+
+[HexaPDF::Stream]: http://hexapdf.gettalong.org/api/HexaPDF/Stream.html
+[HexaPDF::Object]: http://hexapdf.gettalong.org/api/HexaPDF/Object.html
+[HexaPDF::Dictionary]: http://hexapdf.gettalong.org/api/HexaPDF/Dictionary.html
+[HexaPDF::PDFData]: http://hexapdf.gettalong.org/api/HexaPDF/PDFData.html
+[HexaPDF::GlobalConfiguration]: http://hexapdf.gettalong.org/api/HexaPDF/index.html#GlobalConfiguration
+[HexaPDF::Document]: http://hexapdf.gettalong.org/api/HexaPDF/Document.html
+[HexaPDF::Type::Page]: http://hexapdf.gettalong.org/api/HexaPDF/Type/Page.html
