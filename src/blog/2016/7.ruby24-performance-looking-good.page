@@ -1,0 +1,90 @@
+---
+title: Ruby 2.4 Performance Looking Good
+description: Benchmarking Ruby 2.3.3 against Ruby 2.4.0
+feature-image: speed.jpg
+created_at: 2016-12-07 23:08:00 +01:00
+--- name:teaser
+
+There are [some]&nbsp;[articles] highlighting new features of the upcoming Ruby 2.4. I decided to run a
+basic benchmark comparing Ruby 2.4 to Ruby 2.3.3 and was pleasantly surprised.
+
+[some]: http://www.blackbytes.info/2016/12/new-ruby-features/
+[articles]: http://blog.bigbinary.com/categories/Ruby-2-4
+
+--- name:content
+
+A few weeks ago I wrote about [HexaPDF's performance][post] by running a benchmark that compares
+HexaPDF to various other tools in regards to optimizing the size of a PDF file.
+
+However, with this real-world benchmark I cannot only compare HexaPDF to other tools but also to
+itself on other Ruby versions. Note that this is neither an artificial benchmark nor a
+micro-benchmark since PDF files are parsed, their in-memory representation modified and then
+serialized again by the [HexaPDF library][hexapdf]. This involves a lot of string to Ruby object
+conversion and vice versa.
+
+Here are the results:
+
+~~~
+|----------------------------------------------||-----------------------|
+|                      | Ruby 2.3.3p222        || Ruby 2.4.0preview3    |
+|----------------------------------------------||-----------------------|
+| a.pdf (53,056)       |     Time |     Memory ||     Time |     Memory |
+|----------------------------------------------||-----------------------|
+| hexapdf              |    189ms |  14,992KiB ||    222ms |  13,396KiB |
+| hexapdf C            |    152ms |  14,912KiB ||    137ms |  13,260KiB |
+| hexapdf CS           |    154ms |  15,920KiB ||    152ms |  14,432KiB |
+| hexapdf CSP          |    158ms |  16,600KiB ||    176ms |  15,124KiB |
+|----------------------------------------------||-----------------------|
+|----------------------------------------------||-----------------------|
+| b.pdf (11,520,218)   |     Time |     Memory ||     Time |     Memory |
+|----------------------------------------------||-----------------------|
+| hexapdf              |  1,188ms |  31,356KiB ||    900ms |  32,512KiB |
+| hexapdf C            |  1,055ms |  33,460KiB ||  1,025ms |  33,480KiB |
+| hexapdf CS           |  1,120ms |  34,512KiB ||  1,062ms |  35,396KiB |
+| hexapdf CSP          |  9,469ms |  84,896KiB ||  8,891ms |  79,924KiB |
+|----------------------------------------------||-----------------------|
+|----------------------------------------------||-----------------------|
+| c.pdf (14,399,980)   |     Time |     Memory ||     Time |     Memory |
+|----------------------------------------------||-----------------------|
+| hexapdf              |  2,286ms |  44,840KiB ||  2,020ms |  39,808KiB |
+| hexapdf C            |  2,201ms |  49,940KiB ||  2,063ms |  39,908KiB |
+| hexapdf CS           |  2,354ms |  53,076KiB ||  2,211ms |  46,944KiB |
+| hexapdf CSP          | 10,148ms | 104,680KiB ||  9,889ms |  97,088KiB |
+|----------------------------------------------||-----------------------|
+|----------------------------------------------||-----------------------|
+| d.pdf (8,107,348)    |     Time |     Memory ||     Time |     Memory |
+|----------------------------------------------||-----------------------|
+| hexapdf              |  5,834ms | 104,844KiB ||  5,113ms |  65,068KiB |
+| hexapdf C            |  5,762ms |  90,940KiB ||  5,045ms |  62,256KiB |
+| hexapdf CS           |  6,254ms |  84,860KiB ||  5,692ms |  71,036KiB |
+| hexapdf CSP          |  6,327ms |  98,496KiB ||  5,798ms | 102,684KiB |
+|----------------------------------------------||-----------------------|
+|----------------------------------------------||-----------------------|
+| e.pdf (21,788,087)   |     Time |     Memory ||     Time |     Memory |
+|----------------------------------------------||-----------------------|
+| hexapdf              |  1,001ms |  53,352KiB ||    811ms |  47,156KiB |
+| hexapdf C            |  1,111ms | 107,264KiB ||  1,065ms | 105,084KiB |
+| hexapdf CS           |  1,152ms | 108,276KiB ||  1,069ms | 101,172KiB |
+| hexapdf CSP          | 35,771ms | 186,952KiB || 37,525ms | 202,364KiB |
+|----------------------------------------------||-----------------------|
+|----------------------------------------------||-----------------------|
+| f.pdf (154,752,614)  |     Time |     Memory ||     Time |     Memory |
+|----------------------------------------------||-----------------------|
+| hexapdf              | 60,355ms | 606,736KiB || 55,118ms | 484,672KiB |
+| hexapdf C            | 64,876ms | 592,752KiB || 58,753ms | 532,488KiB |
+| hexapdf CS           | 69,811ms | 716,004KiB || 63,725ms | 653,232KiB |
+| ERR hexapdf CSP      |      0ms |       0KiB ||      0ms |       0KiB |
+|----------------------------------------------||-----------------------|
+~~~
+
+When looking at the time, especially for `f.pdf`, it is clear that **Ruby 2.4 is about 9% faster
+than 2.3.3** (ignore the `a.pdf` case since this is a very small file where the initialization cost
+distorts the results)!
+
+To be honest, I expected Ruby 2.4 to be faster because of the Ruby 3x3 initiative. However, what I
+didn't expect was that the **memory consumption is also reduced by about 10%**!
+
+Props to the Ruby core team -- I'm looking forward to using Ruby 2.4!
+
+[post]: hexapdf-performance-benchmark.html
+[hexapdf]: http://hexapdf.gettalong.org
