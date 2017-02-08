@@ -12,7 +12,7 @@ link:
 {menu: {template: <%= context.ref_node.alcn %>, options: posts}}
 
 --- name:tag.menu pipeline:erb
-<% context[:nodes].group_by {|node| node['created_at'].year}.sort {|a, b| a[0] <=> b[0]}.each do |year, nodes| %>
+<% context[:nodes].group_by {|node| node['created_at'].year}.sort {|a, b| b[0] <=> a[0]}.each do |year, nodes| %>
 <h2><%= year %></h2>
 <ul>
 <% nodes.sort {|a, b| b['created_at'] <=> a['created_at'] }.each do |node| %>
