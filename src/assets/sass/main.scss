@@ -79,18 +79,15 @@ ul.project-data li {
   }
 }
 
-.highlighter-rouge pre {
+div.highlighter-rouge {
+  white-space: pre;
   overflow: auto;
+  background: _palette(border-bg);
+  padding: 0.25em 0.65em;
   border: 1px solid #eee;
   border-radius: 4px;
   line-height: normal;
   color: black;
-
-  code {
-    padding: 0.25em 0.65em;
-    margin: 0;
-    border: none;
-  }
 }
 
 .highlighter-rouge .hll { background-color: #ffffcc }
