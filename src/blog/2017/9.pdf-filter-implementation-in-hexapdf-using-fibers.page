@@ -1,0 +1,218 @@
+---
+title: PDF Filter Implementation in HexaPDF Using Fibers
+description: Part of the series on the HexaPDF implementation
+feature-image: fiber.jpg
+created_at: 2017-10-07 12:59:00 +02:00
+--- name:teaser
+
+In the [previous post] about [HexaPDF] I introduced the basic PDF object system. This post will
+focus on one of the available object types, PDF streams and their filters.
+
+[HexaPDF]: http://hexapdf.gettalong.org
+[previous post]: ../2016/pdf-object-representation-in-hexapdf.html
+
+--- name:content
+
+If you are already familiar with the basics of PDF streams and filters, [jump down](#hexapdf) to the
+section about their implementation in HexaPDF.
+
+
+## PDF Streams
+
+As described in the previous post, a PDF stream represents a potentially unlimited sequence of
+bytes. Each stream has also some meta data associated with it and this meta data is represented by a
+PDF dictionary. Since a stream is not limited in size it is used to hold data like images, font
+files or content streams of pages (i.e. the instructions that tell a PDF viewer what to display and
+how).
+
+If you look inside a PDF file you will find that the instructions for defining streams are just
+plain ASCII strings, as are the instructions for all other PDF objects. The following is a valid PDF
+stream:
+
+~~~
+1 0 obj
+<</Length 12>>
+stream
+Hello World!
+endstream
+endobj
+~~~
+
+The first thing to notice is that the PDF stream is defined as an indirect PDF object. Since streams
+have to follow a certain syntax and can be arbitrarily long, they can never be direct objects!
+
+After the object definition comes the PDF dictionary that holds the meta data of the stream. There
+are a few keys like `/Length`, `/Filter` and `/DecodeParms` that are valid for all streams. The only
+mandatory key is `/Length` since without it would be hard (sometimes impossible) to find the end of
+the stream (in essence, we would need to scan for the `endstream` keyword which might, or might not,
+work).
+
+If the dictionary was followed by the `endobj` keyword, we would just have an indirect object
+pointing to a dictionary. However, it is followed by the `stream` keyword, telling us that stream
+data follows, and the stream data itself is followed by the `endstream` keyword.
+
+And that's how streams are represented at the file level. However, before we start exploring how
+HexaPDF handles streams there is one more thing to know of: **stream filters**.
+
+
+## Stream Filters
+
+The example stream shown above contains the exact byte sequence that a PDF reader would get. But
+just dumping all streams without compression into a PDF would lead to large PDF files. Therefore
+streams can employ filters that need to be applied to the raw stream data to get the real stream
+data.
+
+Of the 9 filters (I will leave out the `Crypt` filter because it is a special construct) that are
+defined by the PDF specification four filters deal exclusively with image data:
+
+* `CCITTFaxDecode` handles images encoded with group 3 and 4 CCITT fax encoding,
+* `JBIG2Decode` handles monochrome images in JBIG2 encoding,
+* `DCTDecode` handles JPEG images, and
+* `JPXDecode` handles JPEG2000 images.
+
+Currently, none of these four filters are implemented in HexaPDF. Decoding JPEG or JPEG2000 images
+is currently not necessary because we can just put a whole JPEG/JPEG2000 image in a PDF stream, set
+the filter accordingly and it just works. However, this is not the case with the other two filters
+and therefore they will be implemented in a future version.
+
+That leaves us with five remaining filters of which two, `ASCIIHexDecode` and `ASCII85Decode`, are
+used to ensure that streams in a PDF file are encoded using only ASCII characters, making it
+possible to create PDFs consisting only of ASCII characters. The problem with them is that they make
+the streams bigger instead of smaller (e.g. with `ASCIIHexDecode` each source byte gets encoded by
+two bytes) and are therefore seldomly used.
+
+Finally, the last three filters deal with compressing data:
+
+* The `RunLengthDecode` filter employs a simple run length encoding to compress data. You will
+  probably never see it used.
+
+* The `LZWDecode` filter uses the Lempel-Ziv-Welch algorithm, that is also used by the TIFF format,
+  to compress data. You will also probably never see it used.
+
+* Finally, `FlateDecode` uses the zlib/deflate compression method and this is what is used most of
+  the time since it offers better compression than the other two.
+
+The `LZWDecode` and `FlateDecode` filters can additionally use a predictor algorithm that prepares
+the input stream so that higher compression rates can be achieved. This predictor algorithm is taken
+from the PNG specification and together with the deflate algorithm allows for the easy embedding of
+PNG images into a PDF.
+
+Now that you know which filters are available, we will look at how to they are used.
+
+If a stream has filters applied, the stream dictionary's `/Filter` key needs to be set to the
+applied filters. You read correctly, more than one filter can be applied to a stream; however, this
+feature is rarely used. Additionally, the `/DecodeParms` key can be used to supply decoding
+parameters for each filter.
+
+Going back to our earlier example, it would look like this if the `ASCII85Decode` and
+`ASCIIHexDecode` filters were applied in that order on encoding (note that the filters describe the
+decoding order):
+
+~~~
+1 0 obj
+<</Length 35 /Filter [/ASCIIHexDecode /ASCII85Decode]>>
+stream
+3837635552445d692c2245626f38307e3e>
+endstream
+endobj
+~~~
+
+
+## Implementation in HexaPDF {#hexapdf}
+
+Since PDF streams are essentially dictionaries with a byte stream attached, they are implemented in
+HexaPDF as the subclass [HexaPDF::Stream] of [HexaPDF::Dictionary]. The class provides all necessary
+convenience methods to access, decode and encode streams.
+
+The stream data itself can either be a simple String or a [HexaPDF::StreamData] object. The former
+is mostly used for setting the stream data when creating a PDF file or when processing the decoded
+stream data. The latter is used to represent the stream data **without actually reading/decoding**
+it. The last bit is important since it means that HexaPDF can load large stream objects without
+needing to read the stream data itself if it is not used.
+
+[HexaPDF::StreamData] objects basically just store a reference to an IO object, an offset and a
+length. When asked for the data, i.e. when a stream needs to be read and decoded, it returns an
+object that reads the raw data in chunks to avoid huge memory use when possible. The raw stream data
+is then passed through the filters specified by the stream dictionary to get the decoded stream
+data. Since the raw data is read in chunks, it means that the filters need to be aware of that, too.
+Otherwise the benefits of reading in chunks is wasted. Finally, if the whole stream data is needed
+at once, it is read as described above but concatenated into one huge string.
+
+The best way to think of this is as a **filter pipeline**:
+
+* The first object in the pipeline is responsible for providing the data chunks.
+* The middle objects then transform the data chunks according to some defined algorithms.
+* The last object collects the data chunks and either concatenates them into a string or does
+  something else with them, e.g. writing the chunks to a file.
+
+Therefore the requirements for filter objects used in such a pipeline are:
+
+* Can handle arbitrarily large chunks of source data, from 1 byte upwards
+* Can process the source data in chunks, i.e. it doesn't need all the data to start processing
+
+Thinking about all this, Ruby's **fiber** objects immediately came to mind, mostly because I
+remembered a [blog post about implementing pipelines using fibers][pragdave] by Dave Thomas.
+
+The neat thing about fibers is that they allow you to **interrupt an algorithm at any point and
+return to that exact same point later on**, continuing with the algorithm. This is in stark contrast
+with methods, procs and the like because they always start from the top, even if interrupted in the
+middle. Koichi Sasada gave a [great talk about fibers][ko1-fibers] at this year's Ruby Kaigi that
+you should definitely check out.
+
+As you can see fibers are a perfect fit for implementing the PDF filter pipeline. I have implemented
+some [helper methods][HexaPDF::Filter] for creating the initial, source data yielding fibers and for
+collecting the results.
+
+The filters themselves (e.g.[HexaPDF::Filter::ASCIIHexDecode]) are implemented as modules that have
+the methods `encoder(source, options = nil)` and `decoder(source, options = nil)`. These two methods
+create fibers that transform the data received via the `source` argument and yield the results.
+
+If we were to manually read a PDF stream, the process would be like this (using our example stream
+from above):
+
+* Create fiber `a` that knows how to read chunks from the IO ([the real code][gh-streamdata]):
+
+  ~~~ ruby
+  a = HexaPDF::Filter.source_from_io(io, pos: offset, length: length, chunk_size: chunk_size)
+  ~~~
+
+* Check whether the stream employs filters (our example stream does) and wrap the fiber `a` in the
+  necessary filter fibers ([the real code][gh-stream]):
+
+  ~~~ ruby
+  b = HexaPDF::Filter::ASCIIHexDecode.decoder(a)
+  c = HexaPDF::Filter::ASCII85Decode.decoder(b)
+  ~~~
+
+* Note that **nothing has been read so far** since the fibers were just created but not resumed. To
+  get the string we retrieve the chunks by continuously resuming our fiber and concatenate the
+  chunks ([the real code][gh-stream2]):
+
+  ~~~ ruby
+  HexaPDF::Filter.string_from_source(c) # => "Hello World!"
+  ~~~
+
+And that's the whole magic!
+
+
+## Conclusion
+
+This post showed you how PDF streams and filters work in general and how they are implemented in
+HexaPDF. Using Ruby's fiber objects HexaPDF can lazily load PDF streams and perform chunk-wise
+processing on them, avoiding huge memory usage.
+
+In a future post I will introduce you to the security features of PDF, how they work and how HexaPDF
+implements them.
+
+
+[HexaPDF::Dictionary]: https://hexapdf.gettalong.org/api/HexaPDF/Dictionary.html
+[HexaPDF::Stream]: https://hexapdf.gettalong.org/api/HexaPDF/Stream.html
+[HexaPDF::StreamData]: https://hexapdf.gettalong.org/api/HexaPDF/StreamData.html
+[pragdave]: https://pragdave.me/blog/2007/12/30/pipelines-using-fibers-in-ruby-19.html
+[ko1-fibers]: http://rubykaigi.org/2017/presentations/ko1.html
+[HexaPDF::Filter]: https://hexapdf.gettalong.org/api/HexaPDF/Filter/
+[HexaPDF::Filter::ASCIIHexDecode]: https://hexapdf.gettalong.org/api/HexaPDF/Filter/ASCIIHexDecode.html
+
+[gh-streamdata]: https://github.com/gettalong/hexapdf/blob/master/lib/hexapdf/stream.rb#L87
+[gh-stream]: https://github.com/gettalong/hexapdf/blob/master/lib/hexapdf/stream.rb#L172
+[gh-stream2]: https://github.com/gettalong/hexapdf/blob/master/lib/hexapdf/stream.rb#L144
