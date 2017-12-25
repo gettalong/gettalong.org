@@ -1,0 +1,288 @@
+---
+title: Memory Conscious Programming in Ruby
+description: Ways and strategies to keep memory usage low
+feature-image: motherboard.jpg
+created_at: 2017-10-31 21:47:00 +01:00
+--- name:teaser
+
+When programming in Ruby many people think that egregious memory usage is the norm and unavoidable.
+However, there are ways and strategies to keep memory usage down and in this post I will show you
+some of them.
+
+--- name:content
+
+## Keeping Ruby's Internals in Mind
+
+Ruby's main built-in classes like `TrueClass`, `FalseClass`, `NilClass`, `Integer`, `Float`,
+`Symbol`, `String`, `Array`, `Hash` and `Struct` are highly optimized in terms of execution
+performance and memory usage. Note that I'm talking about CRuby (MRI) here and therefore most things
+will probably not apply to other Ruby implementations.
+
+Internally, i.e. in its C code, each object in Ruby is referenced via the `VALUE` type. This is a
+pointer to a C structure that holds all the necessary information.
+
+All given numbers below are valid for a 64-bit Linux platform but should apply to any other 64-bit
+system.
+
+
+### `nil`, `true`, `false` and Some Integers
+
+Some classes don't need to allocate memory for the C structure when creating an object since the
+**objects can be directly represented by a `VALUE`**. This is the case for objects of the type
+`NilClass` (i.e. the `nil` value), type `TrueClass` (i.e. the `true` value) and type `FalseClass`
+(i.e. the `false` value).
+
+**Small integers in the range of -2^62 to 2^62-1 are also directly represented as a `VALUE`**.
+
+What does this mean? It means that only the bare minimum memory is needed for representing these
+objects. And that you don't need to think about memory usage when using such values.
+
+We can test this by using the `ObjectSpace.memsize_of` method that returns the memory used by an
+object:
+
+~~~
+2.4.2 > require 'objspace'
+ => true
+2.4.2 > ObjectSpace.memsize_of(nil)
+ => 0
+2.4.2 > ObjectSpace.memsize_of(true)
+ => 0
+2.4.2 > ObjectSpace.memsize_of(false)
+ => 0
+2.4.2 > ObjectSpace.memsize_of(2**62-1)
+ => 0
+2.4.2 > ObjectSpace.memsize_of(2**62)
+ => 40
+~~~
+
+As you can see no additional memory is used, except in the last case since the integer is too big.
+Once a `VALUE` structure is needed, an object uses at least 40 bytes of memory.
+
+
+### Arrays, Structs, Hashes and Strings
+
+Objects for these four classes use special C structures instead of the general one. These structures
+allow storing some values directly inside them instead of allocating extra memory.
+
+**Arrays with up to three elements are memory efficient**. After that each new element needs 8
+additional bytes:
+
+~~~
+2.4.2 > ObjectSpace.memsize_of([])
+ => 40
+2.4.2 > ObjectSpace.memsize_of([1])
+ => 40
+2.4.2 > ObjectSpace.memsize_of([1, 2])
+ => 40
+2.4.2 > ObjectSpace.memsize_of([1, 2, 3])
+ => 40
+2.4.2 > ObjectSpace.memsize_of([1, 2, 3, 4])
+ => 72
+~~~
+
+This also applies to structs with up to three members, i.e. those structs only need 40 bytes of
+memory:
+
+~~~
+2.4.2 > X = Struct.new(:a, :b, :c)
+ => X
+2.4.2 > Y = Struct.new(:a, :b, :c, :d)
+ => Y
+2.4.2 > ObjectSpace.memsize_of(X.new)
+ => 40
+2.4.2 > ObjectSpace.memsize_of(Y.new)
+ => 72
+~~~
+
+It is a bit different with hashes but the most important thing is that **hashes without elements
+only need the minimum 40 bytes** (so no big penalty there, e.g. for default values):
+
+~~~
+2.4.2 :044 > ObjectSpace.memsize_of({})
+ => 40
+2.4.2 :045 > ObjectSpace.memsize_of(\{a: 1})
+ => 192
+2.4.2 :046 > ObjectSpace.memsize_of(\{a: 1, b: 2, c: 3, d: 4})
+ => 192
+2.4.2 :047 > ObjectSpace.memsize_of(\{a: 1, b: 2, c: 3, d: 4, e: 5})
+ => 288
+~~~
+
+You can also see that a hash with up to four entries uses 192 bytes, so this is the minimum you need
+for non-empty hashes.
+
+Finally, **strings with up to 23 bytes** are stored directly in the `RString` structure that
+represents a string object:
+
+~~~
+2.4.2 :062 > ObjectSpace.memsize_of("")
+ => 40
+2.4.2 :063 > ObjectSpace.memsize_of("a"*23)
+ => 40
+2.4.2 :064 > ObjectSpace.memsize_of("a"*24)
+ => 65
+~~~
+
+How does this knowledge help you? I don't suggest that you design purely around these constraints
+but they may influence your decisions when you need to choose between alternative implementations.
+
+
+### Your Everyday Object
+
+All "normal" objects, i.e. those without a special C structure, use the general `RObject` structure.
+You might think that this won't allow you to be memory conscious but you are wrong. Even this
+structure has a "memory efficient" mode.
+
+If you have an array the memory used by the array is for storing (`VALUE` pointers to) its entries.
+Similarly, if you have a string it uses memory for storing the bytes that make up the string. So for
+what purpose is memory used in case of a general object? Instance variables!
+
+The values for instance variables are stored by the object, however, the names of the instance
+variables are stored by the associated class object (because normally the objects of one class have
+the same instance variables).
+
+Like with arrays **an object with up to three instance variables only uses 40 bytes**, one with four
+or five uses 80 bytes:
+
+~~~
+2.4.2 > class X; def initialize(c); c.times {|i| instance_variable_set(:"@i#{i}", i)}; end; end
+ => :initialize
+2.4.2 :064 > ObjectSpace.memsize_of(X.new(0))
+ => 40
+2.4.2 :065 > ObjectSpace.memsize_of(X.new(1))
+ => 40
+2.4.2 :066 > ObjectSpace.memsize_of(X.new(2))
+ => 40
+2.4.2 :067 > ObjectSpace.memsize_of(X.new(3))
+ => 40
+2.4.2 :068 > ObjectSpace.memsize_of(X.new(4))
+ => 80
+2.4.2 :069 > ObjectSpace.memsize_of(X.new(5))
+ => 80
+2.4.2 :070 > ObjectSpace.memsize_of(X.new(6))
+ => 96
+~~~
+
+
+## Strategies
+
+### Class and System Design
+
+When developing applications/libraries that don't need to create many objects, you don't really need
+to be memory conscious. However, if they *do* need to create many objects, it would be good to keep
+the above information in the back of your mind when designing the classes and interactions.
+
+Consider this example: You need to create a class that can represent CSS margin values. As per the
+[CSS specification][margin], one to four values are allowed. How would you do this?
+
+* One idea might be to just use an array. This would not be a good abstractions but memory-wise the
+  array would use either 40 bytes or, with four values, 72 bytes.
+
+* However, since most of the array methods are not really applicable, the array should be wrapped
+  inside a class. Objects of this class would use 80 or 112 bytes, depending on the size of the
+  array.
+
+* Another possibility would be to create a class and store the four values in instance variables on
+  initialization. Objects would then always use 80 bytes.
+
+* Finally, instead of a class a struct with four members could be used. Objects would only use 72
+  bytes.
+
+This example may be far-fetched but it nicely illustrates two points: First that using built-in
+types are often the best way to conserve memory, at the cost of having a good abstraction. And
+second that having Ruby's internals in mind when designing classes can reduce memory usage (i.e. in
+the example's case using a struct over a plain class saves 10% per object).
+
+
+### Object Re-use
+
+Another way to conserve memory is to re-use objects when possible. This is easily done in case of
+immutable objects but can be applied in other cases, too.
+
+A typical example for object re-use would be a graphical text editor. The text editor needs to have
+the information about each visual representation of a character (a glyph) available. By caching and
+re-using the glyph information only one instance for each glyph needs to be created, even if
+referenced from multiple positions.
+
+Another example would be the freezing and deduplicating of strings. This can be done on a case by
+case basis or globally for a Ruby source file via the "frozen_string_literal: true" pragma. This
+allows the interpreter to deduplicate strings, reducing the memory usage. Starting with Ruby 2.5 you
+can also deduplicate any string yourself by using the result of the `String#-@` method, e.g. `-str`.
+
+
+### Appropriate Use of Methods and Algorithms
+
+The best memory savings come from **not allocating additional objects at all**. For example, if you
+have an array and need to map each value, you can either use `Array#map` or `Array#map!`. The
+difference is that the first creates a new array whereas the second one modifies the array in-place.
+It is often possible to use the second method without any other code changes. So if you have a
+hotspot that uses a transformation method like `Array#map`, think if you can get away with using a
+different, more memory-efficient method.
+
+**Choosing appropriate algorithms** can also greatly reduce memory usage. For example, when
+modifying an encrypted PDF file in HexaPDF, there are situations where decryption and re-encryption
+of data streams is not needed. By identifying these situations it is possible to reduce memory usage
+and speed up processing by just copying the input data stream straight into the output file. This
+lead to [HexaPDF using less memory than a C++ library][bmark] when optimizing encrypted files.
+
+
+### Measuring Memory Usage
+
+There are several gems that help with determining where a program allocates memory. The two that I
+most often use are [allocation_tracer] and [memory_profiler].
+
+Both tools can measure a whole program or they can be turned on and off to only measure certain
+parts of a program. Either method allows you to determine hotspots in your program and then act on
+the information. For example, while developing kramdown several years ago I found that the HTML
+converter class allocated huge amounts of throw-away strings. By changing this hotspot to a better
+alternative kramdown got faster and used less memory.
+
+To get you started on using these two gems, here are two files that are intended to get pre-loaded
+using the `-r` switch of the ruby binary (i.e. `ruby -I. -ralloc_tracer myscript.rb`).
+
+~~~ ruby
+BEGIN {
+  require 'allocation_tracer'
+  ObjectSpace::AllocationTracer.setup(%i{path line type})
+  ObjectSpace::AllocationTracer.trace
+}
+
+END {
+  require 'pp'
+  results = ObjectSpace::AllocationTracer.stop
+  results.reject {|k, v| v[0] < 10}.sort_by{|k, v| [v[0], k[0]]}.each do |k, v|
+    puts "#{k[0]}:#{k[1]} - #{k[2]} - #{v[0]}"
+  end
+  puts "Sum: " + results.inject(0) {|sum, (k,v)| sum + v[0]}.to_s
+  pp ObjectSpace::AllocationTracer.allocated_count_table
+  pp :total => ObjectSpace::AllocationTracer.allocated_count_table.values.inject(:+)
+}
+~~~
+
+~~~ ruby
+BEGIN {
+  require 'memory_profiler'
+  MemoryProfiler.start
+}
+
+END {
+  report = MemoryProfiler.stop
+  report.pretty_print
+}
+~~~
+
+These two files allow you to profile memory usage without changing your program.
+
+
+## Conclusion
+
+There are various ways to reduce the memory usage of Ruby when developing libraries and
+applications. Knowing a bit of Ruby interpreter internals greatly helps in understanding how Ruby
+uses memory and how we can exploit that fact. Additionally, knowing the performance and memory
+impact of Ruby core methods helps in choosing the appropriate method.
+
+
+[margin]: https://developer.mozilla.org/en-US/docs/Web/CSS/margin
+[bmark]: ../2016/hexapdf-performance-benchmark.html
+[allocation_tracer]: https://github.com/ko1/allocation_tracer
+[memory_profiler]: https://github.com/SamSaffron/memory_profiler
