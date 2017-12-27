@@ -1,0 +1,156 @@
+---
+title: Ruby 2.5 Is Out - Let's Benchmark
+description: Benchmarking Ruby 2.5.0 against versions 2.4.3 and 2.3.6
+feature-image: speed.jpg
+created_at: 2017-12-27 15:40:00 +01:00
+--- name:teaser
+
+Ruby's performance is getting better and better with each release and the [newly released 2.5.0
+version][2.5.0] is no different.
+
+[2.5.0]: https://www.ruby-lang.org/en/news/2017/12/25/ruby-2-5-0-released/
+
+--- name:content
+
+Before the release of Ruby 2.4 last year I [benchmarked Ruby 2.3.3p222 and 2.4.0preview3][post] and
+was pleasantly surprised. Since the [release notes of Ruby 2.5][2.5.0] highlight some performance
+improvements I ran another benchmark.
+
+This time I benchmarked Ruby 2.3.6, 2.4.3 and 2.5.0 on all three [HexaPDF] benchmarks. Since HexaPDF
+is only compatible with Ruby 2.4 and higher, I had to modify it a bit so that it also runs under
+Ruby 2.3. Note that all Ruby versions are tested with the exact same HexaPDF code which means that
+there is no distortion through the use of newer methods (like `String#match?`).
+
+The benchmarks themselves are not that compute-intense but generate a lot of small objects and
+strings. As no heavy computation is done it means that potential speed-ups of the Ruby interpreter
+are most likely not that pronounced. The three benchmarks are:
+
+* [**Optimization**][op]: This benchmark involves reading various PDFs one by one, creating
+  in-memory representations and writing size-optimized versions of the PDFs. This involves a lot of
+  string to Ruby object conversion and vice versa.
+
+* [**Raw Text**][rt]: In this benchmark the text from then English version of Homer's Odyssey is
+  just output line by line, with no additional line breaks begin inserted or text metric measuring
+  being done. This tests the low-level text output facilities of HexaPDF which generate a lot of
+  small strings.
+
+  To see how more text influences the performance, this test is run using the text of Homer's
+  Odyssey one, five and ten times.
+
+* [**Line Wrapping**][lw]: Again Homer's Odyssey is output but this time the line breaking algorithm
+  is used. This means that the text needs to be segmented into parts first and then assembled into
+  lines, providing a more compute intense benchmark.
+
+  This test is run on different page widths where with a page width of 400pt no additional line
+  breaks need to be inserted, and with a page width of 50pt even long words need to be broken.
+
+And here are the results, graphics first followed by the raw data (note that the last four columns
+are missing on the optimization benchmark graphic because the bars would be so much higher):
+
+![optimization](assets/optimization.svg)
+{:.image.fit}
+
+![raw text](assets/raw_text.svg)
+{:.image.fit}
+
+![line wrapping](assets/line_wrapping.svg)
+{:.image.fit}
+
+Raw data for the "Optimization" benchmark:
+
+~~~
+|---------------------------------------------------------------------------------------------|
+| a.pdf (53,056)      |              Time              |                Memory                |
+|---------------------------------------------------------------------------------------------|
+|                     |   2.3.6  |   2.4.3  |   2.5.0  |   2.3.6    |   2.4.3    |   2.5.0    |
+|---------------------------------------------------------------------------------------------|
+| hexapdf             |    158ms |    154ms |    162ms |  15,644KiB |  14,108KiB |  14,424KiB |
+| hexapdf C           |    151ms |    141ms |    155ms |  15,704KiB |  14,224KiB |  14,728KiB |
+| hexapdf CS          |    156ms |    148ms |    161ms |  16,344KiB |  14,644KiB |  15,064KiB |
+| hexapdf CSP         |    209ms |    167ms |    176ms |  16,608KiB |  14,856KiB |  15,504KiB |
+|---------------------------------------------------------------------------------------------|
+| b.pdf (11,520,218)  |              Time              |                Memory                |
+|---------------------------------------------------------------------------------------------|
+| hexapdf             |  1,093ms |    934ms |    839ms |  31,188KiB |  31,604KiB |  25,248KiB |
+| hexapdf C           |  1,032ms |    953ms |    878ms |  31,532KiB |  30,440KiB |  26,004KiB |
+| hexapdf CS          |  1,137ms |  1,087ms |  1,001ms |  34,264KiB |  31,352KiB |  29,120KiB |
+| hexapdf CSP         |  8,938ms |  8,328ms |  7,933ms |  49,796KiB |  46,796KiB |  40,260KiB |
+|---------------------------------------------------------------------------------------------|
+| c.pdf (14,399,980)  |              Time              |                Memory                |
+|---------------------------------------------------------------------------------------------|
+| hexapdf             |  2,192ms |  1,890ms |  1,720ms |  43,272KiB |  39,936KiB |  36,520KiB |
+| hexapdf C           |  2,194ms |  2,052ms |  1,898ms |  43,604KiB |  39,836KiB |  37,968KiB |
+| hexapdf CS          |  2,396ms |  2,203ms |  2,047ms |  49,764KiB |  43,328KiB |  40,672KiB |
+| hexapdf CSP         |  9,435ms |  9,136ms |  8,431ms |  71,284KiB |  63,592KiB |  55,780KiB |
+|---------------------------------------------------------------------------------------------|
+| d.pdf (8,107,348)   |              Time              |                Memory                |
+|---------------------------------------------------------------------------------------------|
+| hexapdf             |  5,889ms |  5,002ms |  4,238ms |  99,812KiB |  59,968KiB |  57,172KiB |
+| hexapdf C           |  5,601ms |  4,967ms |  4,196ms |  85,488KiB |  57,860KiB |  57,724KiB |
+| hexapdf CS          |  6,119ms |  5,576ms |  4,685ms |  83,880KiB |  60,992KiB |  59,048KiB |
+| hexapdf CSP         |  6,284ms |  5,606ms |  4,833ms |  93,520KiB |  90,744KiB |  82,328KiB |
+|---------------------------------------------------------------------------------------------|
+| e.pdf (21,788,087)  |              Time              |                Memory                |
+|---------------------------------------------------------------------------------------------|
+| hexapdf             |  1,034ms |    851ms |    814ms |  44,596KiB |  49,688KiB |  50,704KiB |
+| hexapdf C           |  1,093ms |  1,054ms |    920ms | 109,588KiB |  93,268KiB |  66,916KiB |
+| hexapdf CS          |  1,134ms |  1,127ms |  1,006ms | 109,792KiB |  96,556KiB |  89,128KiB |
+| hexapdf CSP         | 30,476ms | 29,949ms | 28,679ms | 188,592KiB | 184,464KiB | 182,472KiB |
+|---------------------------------------------------------------------------------------------|
+| f.pdf (154,752,614) |              Time              |                Memory                |
+|---------------------------------------------------------------------------------------------|
+| hexapdf             | 59,356ms | 54,641ms | 45,201ms | 583,908KiB | 461,636KiB | 473,448KiB |
+| hexapdf C           | 63,415ms | 58,382ms | 49,877ms | 539,764KiB | 505,060KiB | 504,452KiB |
+| hexapdf CS          | 71,359ms | 64,601ms | 55,915ms | 674,008KiB | 563,100KiB | 592,072KiB |
+| ERR hexapdf CSP     |      0ms |      0ms |      0ms |       0KiB |       0KiB |       0KiB |
+|---------------------------------------------------------------------------------------------|
+~~~
+
+Raw data for "Raw Text" benchmark:
+
+~~~
+|-----------------------------------------------------------------------------------------|
+|                 |               Time             |               Memory                 |
+|-----------------------------------------------------------------------------------------|
+|                 |   2.3.6  |   2.4.3  |   2.5.0  |   2.3.6    |   2.4.3    |   2.5.0    |
+|-----------------------------------------------------------------------------------------|
+| hexapdf 1x      |    667ms |    585ms |    544ms |  28,892KiB |  20,904KiB |  20,956KiB |
+| hexapdf 5x      |  2,571ms |  2,362ms |  2,176ms |  40,092KiB |  35,444KiB |  32,236KiB |
+| hexapdf 10x     |  5,025ms |  4,654ms |  4,208ms |  51,360KiB |  52,664KiB |  46,092KiB |
+| hexapdf 1x ttf  |    708ms |    644ms |    619ms |  25,308KiB |  21,764KiB |  20,464KiB |
+| hexapdf 5x ttf  |  2,932ms |  2,680ms |  2,480ms |  44,800KiB |  45,756KiB |  36,900KiB |
+| hexapdf 10x ttf |  5,785ms |  5,194ms |  4,878ms |  69,996KiB |  62,876KiB |  52,808KiB |
+|-----------------------------------------------------------------------------------------|
+~~~
+
+Raw data for "Line Wrapping" benchmark:
+
+~~~
+|-----------------------------------------------------------------------------------------|
+|                 |     Time |     Time |     Time |     Memory |     Memory |     Memory |
+|-----------------------------------------------------------------------------------------|
+|                 |   2.3.6  |   2.4.3  |   2.5.0  |   2.3.6    |   2.4.3    |   2.5.0    |
+|-----------------------------------------------------------------------------------------|
+| hexapdf 400     |  2,251ms |  2,025ms |  1,865ms |  82,612KiB |  67,276KiB |  68,712KiB |
+| hexapdf 200     |  2,553ms |  2,308ms |  2,141ms |  94,092KiB |  69,420KiB |  69,820KiB |
+| hexapdf 100     |  2,945ms |  2,649ms |  2,434ms |  93,868KiB |  74,496KiB |  73,432KiB |
+| hexapdf 50      |  4,572ms |  4,228ms |  3,974ms | 175,492KiB | 178,932KiB | 157,028KiB |
+| hexapdf 400 ttf |  2,330ms |  2,103ms |  1,959ms |  84,920KiB |  68,812KiB |  70,660KiB |
+| hexapdf 200 ttf |  2,669ms |  2,368ms |  2,201ms |  93,688KiB |  73,540KiB |  78,452KiB |
+| hexapdf 100 ttf |  3,305ms |  2,971ms |  2,712ms |  98,556KiB |  76,804KiB |  80,880KiB |
+| hexapdf 50 ttf  |  7,051ms |  6,602ms |  6,288ms | 268,120KiB | 236,108KiB | 266,376KiB |
+|-----------------------------------------------------------------------------------------|
+~~~
+
+I think that the graphics and numbers speak for themselves: **Ruby is clearly getting faster and
+faster** which is great! And I'm especially excited by the possibility of having an [**MJIT in Ruby
+2.6**][mjit]! Good times! 😊
+
+
+[2.5.0]: https://www.ruby-lang.org/en/news/2017/12/25/ruby-2-5-0-released/
+[post]: ../2016/ruby24-performance-looking-good.html
+[hexapdf]: http://hexapdf.gettalong.org
+[op]: https://gist.github.com/gettalong/8955ff5403fe7abb7bee
+[rt]: https://gist.github.com/gettalong/0d7c576064725774299cdf4d1a51d2b9
+[lw]: https://gist.github.com/gettalong/8afae547ac3e50e9b8ce6c521a2a0eea
+[mjit]: https://bugs.ruby-lang.org/issues/12589#note-35
