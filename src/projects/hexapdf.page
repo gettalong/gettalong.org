@@ -3,7 +3,7 @@ title: HexaPDF
 description: A Versatile PDF Creation and Manipulation Library For Ruby
 github: hexapdf
 rubygem: true
-homepage: http://hexapdf.gettalong.org
+homepage: https://hexapdf.gettalong.org
 image: hexapdf.jpg
 active: maintained
 started: 2014-08-30

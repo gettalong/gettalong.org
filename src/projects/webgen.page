@@ -3,7 +3,7 @@ title: webgen
 description: Fast, powerful and extensible static website generator
 github: webgen
 rubygem: true
-homepage: http://webgen.gettalong.org
+homepage: https://webgen.gettalong.org
 image: webgen.jpg
 active: maintained
 started: 2003-11-17
@@ -48,4 +48,4 @@ based on `callcc`? Version 0.4.0 had one...).
 
 If you want more details on the history of webgen, read ["History of webgen"][history].
 
-[history]: http://webgen.gettalong.org/documentation/history.html
+[history]: https://webgen.gettalong.org/documentation/history.html

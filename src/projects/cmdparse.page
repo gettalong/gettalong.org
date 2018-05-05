@@ -3,7 +3,7 @@ title: cmdparse
 description: Advanced Ruby command line parser supporting nested commands
 github: cmdparse
 rubygem: true
-homepage: http://cmdparse.gettalong.org/
+homepage: https://cmdparse.gettalong.org/
 image: cmdparse.jpg
 active: maintained
 started: 2004-09-22

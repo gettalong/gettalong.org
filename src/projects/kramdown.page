@@ -3,7 +3,7 @@ title: kramdown
 description: Pure Ruby Markdown superset converter
 github: kramdown
 rubygem: true
-homepage: http://kramdown.gettalong.org
+homepage: https://kramdown.gettalong.org
 image: kramdown.jpg
 active: maintained
 started: 2008-09-19
