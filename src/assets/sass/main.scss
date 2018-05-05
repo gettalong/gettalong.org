@@ -3,7 +3,56 @@
 @import 'libs/mixins';
 @import 'libs/skel';
 @import 'font-awesome.min';
-@import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Raleway:400,800,900');
+
+@font-face {
+  font-family: 'Source Sans Pro';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Source Sans Pro Regular'), local('SourceSansPro-Regular'),
+       url('//static.gettalong.org/fonts/source-sans-pro-v11-latin-ext_latin-regular.woff2') format('woff2'),
+       url('//static.gettalong.org/fonts/source-sans-pro-v11-latin-ext_latin-regular.woff') format('woff'),
+       url('//static.gettalong.org/fonts/source-sans-pro-v11-latin-ext_latin-regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Source Sans Pro';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Source Sans Pro Bold'), local('SourceSansPro-Bold'),
+       url('//static.gettalong.org/fonts/source-sans-pro-v11-latin-ext_latin-700.woff2') format('woff2'),
+       url('//static.gettalong.org/fonts/source-sans-pro-v11-latin-ext_latin-700.woff') format('woff'),
+       url('//static.gettalong.org/fonts/source-sans-pro-v11-latin-ext_latin-700.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Raleway'), local('Raleway-Regular'),
+       url('//static.gettalong.org/fonts/raleway-v12-latin-ext_latin-regular.woff2') format('woff2'),
+       url('//static.gettalong.org/fonts/raleway-v12-latin-ext_latin-regular.woff') format('woff'),
+       url('//static.gettalong.org/fonts/raleway-v12-latin-ext_latin-regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 800;
+  src: local('Raleway ExtraBold'), local('Raleway-ExtraBold'),
+       url('//static.gettalong.org/fonts/raleway-v12-latin-ext_latin-800.woff2') format('woff2'),
+       url('//static.gettalong.org/fonts/raleway-v12-latin-ext_latin-800.woff') format('woff'),
+       url('//static.gettalong.org/fonts/raleway-v12-latin-ext_latin-800.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 900;
+  src: local('Raleway Black'), local('Raleway-Black'),
+       url('//static.gettalong.org/fonts/raleway-v12-latin-ext_latin-900.woff2') format('woff2'),
+       url('//static.gettalong.org/fonts/raleway-v12-latin-ext_latin-900.woff') format('woff'),
+       url('//static.gettalong.org/fonts/raleway-v12-latin-ext_latin-900.ttf') format('truetype');
+}
 
 /*
 	Future Imperfect by HTML5 UP
