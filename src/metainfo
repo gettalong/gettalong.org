@@ -2,6 +2,12 @@
 [/**/*.woff, /**/*.woff2, /**/*.svg, /**/*.eot, /**/*.ttf, /.htaccess, /**/*.json]:
   handler: copy
 
+[/**/*.js, /**/*.css]:
+  modified_at_in_dest_path: true
+
+/**/*.scss:
+  modified_at_in_dest_path: true
+
 --- alcn
 /**/*.html:
   template: /templates/page.template
@@ -14,3 +20,6 @@
 
 /projects/**/*.html:
   template: /templates/project.template
+
+/**/*.css:
+  pipeline: scss,cssminify
