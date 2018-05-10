@@ -1,0 +1,84 @@
+---
+title: Privacy Enhancements
+description: Changes on my websites in the light of the GDPR
+feature-image: private.jpg
+created_at: 2018-05-10 17:40:00 +02:00
+--- name:teaser
+
+The European Union's General Data Protection Regulation (GDPR) will be enforced from May 25th
+forward. In the light of this I adjusted some things on `*.gettalong.org` websites.
+
+--- name:content
+
+## No External Resources
+
+I have never used many external resources but now even those few are gone. This means:
+
+* Fonts that were previously hosted by Google Fonts are now locally hosted. So Google won't get any
+  IP adresses or other data.
+
+* All Javascript, CSS and images are also locally hosted. This was already the case with the
+  exception of a few images.
+
+The disadvantage of this approach is that browser caching won't be as effective. However, this is
+offset by using longer caching times due to the use of new cache-busting features of [webgen].
+
+
+## Analytics
+
+I still use [StatCounter] for site analytics. So "no external resources" was not 100% correct. The
+thing is, however, that the websites *would* work without it and that StatCounter is blocked by
+default by systems like [uMatrix]. For example, if you are using uMatrix, the websites will work
+even if you only enabled 1st-party content.
+
+To enhance the privacy of the data I have enabled [IP address masking] (which replaces the last
+octet of the IP address with a dummy value) and disabled the tracking cookies in StatCounter (which
+means that every visit is the first visit).
+
+If you see a cookie named `__cfduid`: It is from CloudFlare and is not used for tracking. See the
+[CloudFlare site] for more information.
+
+
+## Web Server Enhancements
+
+Additionally, I'm now using some HTTP headers that will enhance the privacy:
+
+`Referrer-Policy "same-origin"`
+
+: If you click on a link to an external website, the external site will normally get the URL of the
+  original site sent during the request. This header tells the browser to do this only for the
+  website itself and not for external websites (which get nothing).
+
+`Strict-Transport-Security "max-age=31536000"`
+
+: Also called HSTS, this header will mandate the use HTTPS for one year after the first access, even
+  if the link entered into the browser is HTTP. So, essentially, it forces the browser to use HTTPS.
+
+`X-Frame-Options "SAMEORIGIN"`
+
+: This header disallows embedding the website into another website by use of `<iframe>` tags.
+
+
+## Website Checking Tools
+
+If you want to check your website for trackers, HSTS or security related headers, have a look at the
+following websites:
+
+<https://webbkoll.dataskydd.net/en>
+
+: Checks for trackers and other things
+
+<https://www.ssllabs.com/ssltest/>
+
+: Checks whether HTTPS is correctly set up
+
+<https://securityheaders.com>
+
+: Checks for security related HTTP headers
+
+
+[webgen]: https://webgen.gettalong.org/news.html#webgen-1-5-0-released
+[statcounter]: https://statcounter.com
+[umatrix]: https://github.com/gorhill/uMatrix
+[ip address masking]: https://de.statcounter.com/support/knowledge-base/314/
+[CloudFlare site]: https://support.cloudflare.com/hc/en-us/articles/200170156-What-does-the-Cloudflare-cfduid-cookie-do-
