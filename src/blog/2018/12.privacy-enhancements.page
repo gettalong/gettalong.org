@@ -10,6 +10,9 @@ forward. In the light of this I adjusted some things on `*.gettalong.org` websit
 
 --- name:content
 
+[**Update 2018-06-13**](#update)
+
+
 ## No External Resources
 
 I have never used many external resources but now even those few are gone. This means:
@@ -75,6 +78,15 @@ following websites:
 <https://securityheaders.com>
 
 : Checks for security related HTTP headers
+
+
+## Update 2018-06-13 {#update}
+
+Since StatCounter doesn't seem to be compliant with EU regulations, I have decided to drop it and
+use a self-hosted installation of Matomo instead. Now there are really no external dependencies
+anymore.
+
+Furthermore, I have added a [privacy policy](/privacy.html) and a [legal notice](/legal.html) page.
 
 
 [webgen]: https://webgen.gettalong.org/news.html#webgen-1-5-0-released
