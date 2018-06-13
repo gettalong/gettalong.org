@@ -1,0 +1,47 @@
+---
+title: Privacy Policy
+---
+I value the privacy of your data and only process it according to the laws
+(GDPR, TKG2003). In this privacy policy I inform you about the most important
+aspects of data processing within the <code>*.gettalong.org</code> websites.
+
+
+### Web Analytics
+
+I use [Matomo] for web analytics. Matomo uses a persistent cookie (a small data
+file that gets stored on your computer by a website) to detect recurring
+visits. It is self-hosted and therefore no data is given to third-parties. IP
+addresses are anonymized and visitors are not tracked across websites.
+Individual tracking data is deleted after 180 days.
+
+If you have activated the ["Do Not Track" feature][dnt] of your browser, your
+visits are not tracked. Alternatively, you can opt-out of being tracked below:
+
+<iframe style="border: 0; height: 200px; width: 600px;"
+   src="https://stats.gettalong.org/index.php?module=CoreAdminHome&action=optOut&language=en"
+></iframe>
+
+
+### Logging
+
+When accessing the websites, some data is logged (truncated IP address, date
+and time of access, referrer URL and user agent used by the client) for one
+month to help in fixing errors and optimizing the websites.
+
+
+### Your Rights
+
+You have the right to be informed, of access, to rectification, to erasure, to
+restricted processing, to data portability and the right to object. If you
+believe that your rights with respect to your privacy have been violated, you
+can file a complaint at the [Austrian data protection agency][dpa]
+("Datenschutzbehörde").
+
+
+### Contact
+
+You can contact me via <mailto:t_leitner@gmx.at>.
+
+[dpa]: https://www.dsb.gv.at
+[matomo]: https://matomo.org/
+[dnt]: https://en.wikipedia.org/wiki/Do_Not_Track
