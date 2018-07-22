@@ -24,3 +24,6 @@ HexaPDF was designed with ease of use and performance in mind. It uses lazy load
 computing when possible and tries to produce small PDF files by default.
 
 It uses [cmdparse](cmdparse.html) for its command line application.
+
+The library is released under the GNU Affero General Public License (AGPL), with [commercial
+licenses](https://gettalong.at/hexapdf/) also being available.
