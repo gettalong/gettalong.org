@@ -1,0 +1,38 @@
+---
+title: kramdown 2.0 and beyond
+description: Splitting kramdown into multiple parts to ease maintenance
+feature-image: maintenance.jpg
+created_at: 2018-10-26 8:40:00 +02:00
+--- name:teaser
+
+The [kramdown](https://kramdown.gettalong.org) project has become an umbrella project for many
+parsers, converters, math engines, ... It is time to split things apart to make them more manageable
+and have faster release cycles.
+
+--- name:content
+
+Once kramdown was really a **pure-Ruby** Markdown-superset conversion library. Nowadays, it includes
+many extensions that rely on Ruby gems with C extensions or even on other programming languages like
+NodeJS. This makes updating and testing kramdown more time intensive since one has to install and
+manage all dependencies -- and as we all know, NodeJS *loves* dependencies...
+
+Therefore starting with release 2.0 the core kramdown gem will be reduced to a meaningful subset of
+extensions, and all other extension will get their own gem. This will allow more independent
+development and faster releases.
+
+I will still develop the core kramdown gem and I will help out with the extensions if I have time
+but as of now I'm looking for developers/maintainers for the following extensions (**[contact
+me if you are interested](mailto:t_leitner@gmx.at)**):
+
+* GFM parser
+* PDF converter
+* mathjaxnode math engine
+* sskatex math engine
+* katex math engine
+* itex2mml math engine
+* ritex math engine
+* coderay syntax highlighter
+
+The plan is to release the next kramdown version with the current pending changes. Then kramdown 2.0
+and all extension gems (in their 1.0 version) will be released, with no code changes. From this
+point onwards each gem has its own release cycle.
