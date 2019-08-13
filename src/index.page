@@ -1,3 +1,19 @@
 ---
 title: Home
+meta:
+  'twitter:card': summary_large_image
+  'twitter:site': '@_gettalong'
+  'twitter:creator': '@_gettalong'
+  'twitter:title': &title gettalong's web home
+  'twitter:description': &desc Thomas Leitner's website and blog about Ruby, software engineering and the joy of solving problems.
+  'twitter:image': &image 'https://static.gettalong.org/images/profile.jpg'
+
+meta_property:
+  'og:locale': en_US
+  'og:type': article
+  'og:title': *title
+  'og:description': *desc
+  'og:image': *image
+  'og:url': https://gettalong.org
+  'og:site_name': *desc
 ---

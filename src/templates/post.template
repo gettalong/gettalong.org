@@ -1,7 +1,38 @@
 --- name:content
+<%
+card = 'summary'
+
+if context.node['feature-image']
+  card = 'summary_large_image'
+  image_node = context.node.resolve("/blog/feature-images/#{context.node['feature-image']}")
+end
+
+if context.dest_node == context.node
+  [['twitter:card', card],
+   ['twitter:site', '@_gettalong'],
+   ['twitter:creator', '@_gettalong'],
+   ['twitter:title', context.node['title']],
+   ['twitter:description', context.node['description']],
+   (['twitter:image', image_node.url] if image_node),
+  ].each do |name, content|
+    context.html_head.meta(name, content)
+  end
+  [['og:locale', 'en_US'],
+   ['og:type', 'article'],
+   ['og:title', context.node['title']],
+   ['og:description', context.node['description']],
+   ['og:image', image_node ? image_node.url : 'https://static.gettalong.org/images/profile.jpg'],
+   ['og:url', context.node.url],
+   ['og:site_name', "Thomas Leitner's website and blog about Ruby, software engineering and the joy of solving problems."],
+  ].each do |name, content|
+    context.html_head.meta_property(name, content)
+  end
+end
+
+%>
 <article class="post">
   <% if context.node['feature-image'] %>
-  <header style="background-image: linear-gradient(rgba(255, 255, 255,0.9),rgba(255,255,255,0.9)), url(<%= context.dest_node.route_to(context.node.resolve("/blog/feature-images/#{context.node['feature-image']}")) %>)">
+  <header style="background-image: linear-gradient(rgba(255, 255, 255,0.9),rgba(255,255,255,0.9)), url(<%= context.dest_node.route_to(image_node) %>)">
   <% else %>
   <header>
   <% end %>
