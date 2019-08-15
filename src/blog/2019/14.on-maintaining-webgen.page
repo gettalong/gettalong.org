@@ -1,0 +1,93 @@
+---
+title: On maintaining webgen
+description: Why I still maintain my static website generator webgen
+feature-image: webgen.jpg
+created_at: 2019-08-15 22:40:00 +02:00
+--- name:teaser
+
+My static website generator [webgen](https://webgen.gettalong.org) has been around for a long time.
+Though there are now many other static website generators written in Ruby, I still maintain webgen
+because some of its functionality is unique.
+
+--- name:content
+
+Development of webgen started 16 years ago, back in 2003 because I needed a tool for creating my
+personal website. From there it grew into a full-blown static website generator over the years (you
+can read more about its [history] at the webgen homepage). It had its heyday around 2007/2008 when
+not many static website generators existed ([Hobix](https://hobix.com) anyone?). A few years later
+the "boom years" for static website generators started and [many, many][staticgen] were created.
+Ruby lends itself especially well for such a tool due to its rich ecosystem of web related
+libraries.
+
+Nowadays webgen is probably only used by a handful of people besides myself; if you are one them, I
+would [love to hear](mailto:t_leitner@gmx.at) why you are sticking with webgen. I still maintain
+webgen and generate all my websites with it, like this personal website, the [webgen homepage], the
+[cmdparse homepage], the [kramdown homepage] or the [HexaPDF homepage].
+
+One reason is that I'm naturally very familiar with it, it works great and is reasonably fast.
+However, the main reason is that it provides some unique features that I didn't find anywhere else.
+Here are two that I find especially useful:
+
+Flexible file system layout
+
+: In contrast to most other static website generators webgen doesn't prescribe a certain directory
+  structure. The default is the following:
+
+  ~~~
+  website/           # your website directory
+    webgen.config    # webgen's configuration file
+    src/             # the directory with all the source files
+    ext/             # extensions to webgen's functionality
+    out/             # where all the generated files go
+    tmp/             # directory for temporary files and caches
+  ~~~
+
+  However, the only thing webgen really needs is the `webgen.config` file, which can be a YAML or
+  Ruby file and configures webgen. [cmdparse][cmdparse homepage], for example, uses the following in
+  its [`webgen.config`][cmdparse-config] file:
+
+  ~~~
+  website.config['sources'] =[['/', :file_system, 'doc']]
+  website.config['destination'] = [:file_system, 'htmldoc']
+  website.config['website.tmpdir'] = 'webgen-tmp'
+  ~~~
+
+  This means that the source directory is changed to `doc/`, the output directory to `htmldoc/` and
+  the temporary directory to `webgen-tmp/`. Due to this flexibility it is easy to ship the
+  source for the documentation website with the code itself.
+
+RDoc integration
+
+: webgen can integrate the API documentation created via RDoc into a website. This means, for
+  example, that the API documentation has the same look and feel as the rest of the documentation
+  (see, for example, the documentation for [CmdParse::CommandParser]).
+
+  What is more important, though, and more useful is that the other parts of the website can easily
+  link to any part of the API documentation. This functionality is extensively used by the [webgen
+  homepage] itself and, for example, by the [HexaPDF homepage].
+
+  Taking the [HexaPDF changelog] as example, you will find that all mentions of classes or methods
+  are linked to the correct place. There will be no dangling links because during the generation of
+  the website all such links are automatically checked and a warning would appear if a link target
+  is not found.
+
+  The only other tool I know that integrates API documentation in such a way is [Sphinx]. But maybe
+  [Antora][twitter] (project documentation tool based on Asciidoctor) will get such a functionality,
+  too!
+
+
+Until another tool provides at least these two functionalities, I guess I will maintain webgen. The
+time and effort is not that much and if I need something new I can quickly implement it.
+
+
+[staticgen]: https://www.staticgen.com
+[history]: https://webgen.gettalong.org/documentation/history.html
+[webgen homepage]: https://webgen.gettalong.org
+[cmdparse homepage]: https://cmdparse.gettalong.org
+[kramdown homepage]: https://kramdown.gettalong.org
+[hexapdf homepage]: https://hexapdf.gettalong.org
+[cmdparse-config]: https://github.com/gettalong/cmdparse/blob/master/webgen.config#L4
+[HexaPDF changelog]: https://hexapdf.gettalong.org/documentation/changelog.html
+[cmdparse::commandparser]: https://cmdparse.gettalong.org/api/CmdParse/CommandParser.html
+[sphinx]: http://www.sphinx-doc.org/en/master/
+[twitter]: https://twitter.com/_gettalong/status/1139094702693736448
