@@ -1,0 +1,289 @@
+---
+title: Benchmarking Ruby 2.4 to 3.0
+description: Benchmarking Ruby version with three different benchmarks
+feature-image: speed.jpg
+created_at: 2020-12-28 10:24:00 +01:00
+--- name:teaser
+
+I ran some benchmarks using [HexaPDF] after Ruby 2.4 was released in [2016] and again after Ruby 2.5
+was releasd in [2017]. Since [Ruby 3.0.0] was released this Christmas, I think this warrants another
+round of benchmarks. And this time three different real-world benchmarks are used to evaluate
+relative Ruby performance.
+
+[HexaPDF]: https://hexapdf.gettalong.org
+[2016]: ../2016/ruby24-performance-looking-good.html
+[2017]: ../2017/benchmarking-ruby-2-5.html
+[Ruby 3.0.0]: https://www.ruby-lang.org/en/news/2020/12/25/ruby-3-0-0-released/
+
+--- name:content
+
+## Three Real-world Benchmarks
+
+The last two times I just used HexaPDF to evaluate the relative performance of Ruby releases. This
+time I will use three different Rubygems for this task:
+
+1. **HexaPDF Benchmarks**
+
+   What once started as simple gists is now part of the [HexaPDF repository][hprepo]. The benchmark
+   descriptions are available on the [HexaPDF website][hpbm]. I recommend looking at the
+   descriptions there to understand what the benchmarks do as I will not replicate the descriptions
+   here.
+
+   The following commands were excecuted in the `benchmark/` directory:
+
+   ~~~
+   ./rubies.sh "2.4.9 2.5.7 2.6.5 2.7.1 3.0.0 3.0.0j" optimization -b hexapdf
+   ./rubies.sh "2.4.9 2.5.7 2.6.5 2.7.1 3.0.0 3.0.0j" raw_text -b hexapdf
+   ./rubies.sh "2.4.9 2.5.7 2.6.5 2.7.1 3.0.0 3.0.0j" line_wrapping -b hexapdf
+   ~~~
+
+   A Ruby version with an appended "j" tells the script to activate the JIT.
+
+2. **kramdown Benchmark**
+
+   [kramdown] also includes a simple benchmarking script which is normally used for evaluating the
+   performance of different kramdown versions. I added another script to facilitate testing of a
+   single kramdown version on different Ruby versions.
+
+   The benchmark just parses and converts a sample Markdown input document. The size of the input
+   document is increased for each run (i.e. the original input document is just concatenated *X*
+   times).
+
+   You can run the benchmark yourself in the kramdown repository using the
+   `benchmark/benchmark-rubies.sh` script which needs rbenv and gnuplot installed as well as the
+   kramdown gem in the `rbenv shell --unset` environment.
+
+   The following command was used:
+
+   ~~~
+   /benchmark/benchmark-rubies.sh "2.4.9 2.5.7 2.6.5 2.7.1 2.7.1j 3.0.0 3.0.0j"
+   ~~~
+
+   A Ruby version with an appended "j" tells the script to activate the JIT.
+
+3. **geom2d Benchmark**
+
+   [geom2d] is a small library for 2D geometry. It includes an algorithm for boolean operations
+   (think union, intersection, ...) on arbitrary polygons. The benchmark intersects polygons -- one
+   set has just a few vertices, the other many -- which is a compute-intensive operation. So I would
+   expect a speed-up when using the JIT here.
+
+   This benchmark is done using the superb [benchmark-driver] gem.
+
+[hprepo]: https://github.com/gettalong/hexapdf/tree/master/benchmark
+[hpbm]: https://hexapdf.gettalong.org/documentation/benchmarks/
+[kramdown]: https://kramdown.gettalong.org
+[geom2d]: https://github.com/gettalong/geom2d
+[benchmark-driver]: https://github.com/benchmark-driver/benchmark-driver
+
+
+## Results and Comments
+
+All benchmarks were done on Ubuntu 20.04 with an i7-8550U processor.
+
+### HexaPDF
+
+The images are SVG files, click on them to open them in a new window to view details. The raw data
+is already the post-processed data ready for gnuplot-ingestion, with the time in milliseconds and
+the memory in kilobytes.
+
+#### Optimization Benchmark
+
+Note: There are six groups (different files `a.pdf` to `f.pdf`) of four benchmarks (different
+hexapdf invocations; except for `f.pdf` which only has three because the CSP mode would take
+*really* long) with each benchmark having six columns (different Ruby versions).
+
+[![HexaPDF optimization benchmark](assets/hexapdf-optimization.svg)](assets/hexapdf-optimization.svg){: target="_blank"}
+{:.image.fit}
+
+~~~
+Time "hexapdf 2.4.9" "hexapdf 2.5.7" "hexapdf 2.6.5" "hexapdf 2.7.1" "hexapdf 3.0.0" "hexapdf 3.0.0-jit"
+"a.pdf" 148 189 200 227 177 512
+"C a.pdf" 141 154 152 155 157 456
+"CS a.pdf" 138 143 159 157 162 441
+"CSP a.pdf" 159 155 188 183 177 452
+"b.pdf" 710 627 653 660 688 1069
+"C b.pdf" 701 641 672 733 714 1058
+"CS b.pdf" 797 723 762 788 806 1063
+"CSP b.pdf" 4430 4385 4582 4573 4823 5205
+"c.pdf" 1227 1224 1233 1206 1303 1571
+"C c.pdf" 1308 1257 1307 1358 1407 1689
+"CS c.pdf" 1461 1408 1402 1446 1515 1746
+"CSP c.pdf" 4674 4823 5010 5138 5308 5993
+"d.pdf" 3439 2973 2984 2873 3296 3672
+"C d.pdf" 3372 2875 2957 2862 3029 3725
+"CS d.pdf" 3789 3234 3277 3109 3510 4213
+"CSP d.pdf" 3801 3370 3484 3150 3557 4254
+"e.pdf" 687 611 641 571 601 785
+"C e.pdf" 737 694 699 696 759 1016
+"CS e.pdf" 770 723 738 755 757 1065
+"CSP e.pdf" 17650 18082 18140 18897 19324 0
+"f.pdf" 44039 0 36400 35459 33779 37168 39065
+"C f.pdf" 48286 39558 39627 40512 42744 42474
+"CS f.pdf" 54120 47982 45595 46055 48131 49231
+
+
+Memory "hexapdf 2.4.9" "hexapdf 2.5.7" "hexapdf 2.6.5" "hexapdf 2.7.1" "hexapdf 3.0.0" "hexapdf 3.0.0-jit"
+"a.pdf" 15480 15292 19404 28540 27284 43896
+"C a.pdf" 15624 15240 19428 28332 27552 44408
+"CS a.pdf" 15924 15720 19744 28708 27636 44344
+"CSP a.pdf" 16172 16312 20824 29244 27968 44420
+"b.pdf" 35308 34452 35944 46072 45180 57484
+"C b.pdf" 35184 34480 35304 46236 45648 57384
+"CS b.pdf" 35256 37456 36020 48068 48264 57448
+"CSP b.pdf" 55608 48204 47156 57172 58824 59900
+"c.pdf" 40568 34652 43412 51816 47856 57480
+"C c.pdf" 42560 37588 38348 50116 49644 57328
+"CS c.pdf" 44892 39936 41328 52052 51756 57508
+"CSP c.pdf" 70560 59576 54672 66208 65900 67680
+"d.pdf" 62144 65920 70084 76028 76336 76980
+"C d.pdf" 61860 57788 64076 77260 73856 74396
+"CS d.pdf" 63356 57284 64276 79816 74436 74344
+"CSP d.pdf" 87832 75504 82328 99620 88016 89080
+"e.pdf" 45868 51308 48000 54892 55444 55656
+"C e.pdf" 100856 69980 75440 98592 102932 94516
+"CS e.pdf" 100260 69748 74024 95260 100696 101788
+"CSP e.pdf" 197016 176820 128996 151168 152404 0
+"f.pdf" 489868 0 490452 498336 471948 472380 472804
+"C f.pdf" 506684 504776 486748 528316 529732 537968
+"CS f.pdf" 608280 596416 567020 595480 609728 601932
+~~~
+
+#### Raw Text Benchmark
+
+[![HexaPDF raw text benchmark](assets/hexapdf-raw_text.svg)](assets/hexapdf-raw_text.svg){: target="_blank"}
+{:.image.fit}
+
+~~~
+Time "hexapdf 2.4.9" "hexapdf 2.5.7" "hexapdf 2.6.5" "hexapdf 2.7.1" "hexapdf 3.0.0" "hexapdf 3.0.0-jit"
+"1x" 479 465 496 511 566 784
+"5x" 1809 1830 1868 1913 2021 2278
+"10x" 3531 3434 3600 3765 4002 5255
+"1x ttf" 544 613 599 594 629 942
+"5x ttf" 2222 2389 2268 2290 2482 2981
+"10x ttf" 4479 4552 4563 4638 4851 5501
+
+
+Memory "hexapdf 2.4.9" "hexapdf 2.5.7" "hexapdf 2.6.5" "hexapdf 2.7.1"  "hexapdf 3.0.0" "hexapdf 3.0.0-jit"
+"1x" 30152 24316 26232 35520 34056 46840
+"5x" 57544 36876 38608 45864 45368 55020
+"10x" 77372 49840 49668 58012 57112 68320
+"1x ttf" 26932 23880 24872 33752 33232 46868
+"5x ttf" 59996 42572 40920 48856 48820 49588
+"10x ttf" 80584 60372 55132 62728 63688 68268
+~~~
+
+
+#### Line Wrapping Benchmark
+
+[![HexaPDF line wrapping benchmark](assets/hexapdf-line_wrapping.svg)](assets/hexapdf-line_wrapping.svg){: target="_blank"}
+{:.image.fit}
+
+~~~
+Time "hexapdf 2.4.9" "hexapdf 2.5.7" "hexapdf 2.6.5" "hexapdf 2.7.1" "hexapdf 3.0.0" "hexapdf 3.0.0-jit"
+"L 400" 1210 1219 1265 1331 1330 1703
+"C 400" 1519 1581 1577 1693 1506 1848
+"L 200" 1357 1344 1411 1480 1494 1744
+"C 200" 1772 1869 1851 1877 1658 1948
+"L 100" 1628 1617 1560 1758 1676 1856
+"C 100" 2098 2077 2058 2217 2001 2310
+"L 50" 2901 2787 2762 2806 2733 3172
+"C 50" 3561 3461 3483 3616 3387 3903
+"L 400 ttf" 1300 1376 1411 1436 1426 1933
+"C 400 ttf" 1628 1700 1759 1729 1733 1898
+"L 200 ttf" 1588 1525 1552 1589 1783 1923
+"C 200 ttf" 1864 1892 1971 1979 1816 2178
+"L 100 ttf" 1888 1833 1872 1859 1897 2288
+"C 100 ttf" 2423 2420 2507 2404 2235 2805
+"L 50 ttf" 5100 4845 5015 4947 4937 5574
+"C 50 ttf" 6104 5946 6272 5904 5571 6493
+
+
+Memory "hexapdf 2.4.9" "hexapdf 2.5.7" "hexapdf 2.6.5" "hexapdf 2.7.1" "hexapdf 3.0.0" "hexapdf 3.0.0-jit"
+"L 400" 84676 77912 83476 91672 100696 101928
+"C 400" 85112 80204 83344 96848 108756 109564
+"L 200" 86144 74900 93812 104136 92736 93284
+"C 200" 83552 80696 81436 91616 100940 101508
+"L 100" 83048 74040 91552 98792 89744 90268
+"C 100" 83568 76772 80712 90464 96956 97828
+"L 50" 200188 179200 155004 193996 189788 207156
+"C 50" 199416 174324 161544 186052 231444 221180
+"L 400 ttf" 81296 79572 96844 100784 91120 92108
+"C 400 ttf" 78544 82332 92356 103460 108152 108688
+"L 200 ttf" 88684 85288 90144 92304 85732 86112
+"C 200 ttf" 76960 89232 87568 96148 98860 99280
+"L 100 ttf" 79764 84788 87452 92336 86368 87404
+"C 100 ttf" 80820 88760 85492 95368 96608 97268
+"L 50 ttf" 257716 270368 236536 286000 281968 284932
+"C 50 ttf" 259612 291688 252096 282292 286640 284348
+~~~
+
+#### Comments
+
+* Run time for all Rubies except Ruby 3.0.0+JIT is roughly the same, with 3.0.0+JIT being much
+  slower in nearly all cases.
+
+* Memory usage (see raw data) generally got better from 2.4 to 2.5 but got worse starting with 2.7
+  and takes another hit when the JIT is used.
+
+* One interesting thing is that Ruby 3.0.0+JIT errors out when doing the "hexapdf CSP" optimization
+  benchmark on the `e.pdf` file. I will have to look at this to see what is happening there.
+
+
+### kramdown
+
+![kramdown benchmark](assets/kramdown.png)
+
+~~~
+# ruby-2.4.9p362 || ruby-2.5.7p206 || ruby-2.6.5p114 || ruby-2.7.1p83 || ruby-2.7.1p83-jit || ruby-3.0.0p0 || ruby-3.0.0p0-jit
+256     0.73670 0.72830 0.69474 0.69346 0.70838 0.69294 0.69133
+512     1.72586 1.70017 1.64458 1.61140 1.65583 1.49876 1.46554
+1024    3.58049 3.50635 3.31272 3.22631 3.25020 3.32012 3.23109
+~~~
+
+The general trend here is that Ruby got faster over time, with Ruby 2.7 and 3.0 being roughly the
+same, irrespective of JIT usage.
+
+
+### geom2d
+
+The bars represent instructions per seconds, so larger bars are better.
+
+![geom2d large benchmark](assets/geom2d-large.png)
+{:.image.fit}
+
+![geom2d small benchmark](assets/geom2d-small.png)
+{:.image.fit}
+
+~~~
+Comparison:
+                       large
+          2.6.5:         3.0 i/s
+          2.4.9:         2.9 i/s - 1.02x  slower
+          2.5.7:         2.9 i/s - 1.03x  slower
+          3.0.0:         2.9 i/s - 1.05x  slower
+          2.7.1:         2.8 i/s - 1.05x  slower
+    3.0.0 --jit:         2.6 i/s - 1.14x  slower
+
+                       small
+          2.6.5:      3813.9 i/s
+          3.0.0:      3797.3 i/s - 1.00x  slower
+          2.5.7:      3794.6 i/s - 1.01x  slower
+          2.7.1:      3635.5 i/s - 1.05x  slower
+    3.0.0 --jit:      3582.3 i/s - 1.06x  slower
+          2.4.9:      3562.4 i/s - 1.07x  slower
+~~~
+
+I expected that Ruby 3.0.0+JIT would perform best in this benchmark because it is largely CPU-bound.
+However, it was actually one of the slowest Rubies.
+
+
+## Conclusion
+
+Ruby 3.0.0 brings many new things to the table with respect to concurrency and typing. If we look at
+strictly CPU-bound applications it also got much better performance, especially with the JIT.
+
+However, for real world applications the performance increases are evolutionary rather than
+revolutionary. Those who follow Ruby development have known this for years. And I think that is okay
+because Ruby is already acceptably fast in many cases (e.g. the HexaPDF PDF library being only
+50%-90% slower than a PDF library written in C++).
