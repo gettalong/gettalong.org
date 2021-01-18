@@ -1,0 +1,330 @@
+---
+title: An Unusual Performance Optimization
+description: How wondering about an odd benchmark result led to better performance
+feature-image: speed.jpg
+created_at: 2021-01-14 20:24:00 +01:00
+--- name:teaser
+
+I regularly run the [HexaPDF benchmarks][bench] to make sure that HexaPDF gets faster and not
+slower. One of the benchmarks, the "raw_text" benchmark, always had me wondering why using TrueType
+fonts was visibly slower. So I decided to investigate.
+
+[bench]: https://hexapdf.gettalong.org/documentation/benchmarks/
+
+--- name:content
+
+## The Odd Benchmark Result
+
+The "raw_text" benchmarks tests the performance of close-to-metal text output. This is important
+because it is the limiting factor when creating PDF files, especially big PDF files, with much text
+content.
+
+What the benchmark does is
+
+* reading a file line by line,
+* putting each line on a page, without line wrapping and with manual cursor positioning,
+* and creating new pages as necessary.
+
+Here is the main part of the HexaPDF script:
+
+~~~ ruby
+File.foreach(ARGV[0], mode: 'r') do |line|
+  if y < bottom_margin
+    # Remove the canvas object out of scope for garbage collection
+    if canvas
+      doc.clear_cache(canvas.context.data)
+      canvas.context.contents = canvas.context.contents
+    end
+    canvas = doc.pages.add.canvas
+    canvas.font(font, size: 12)
+    canvas.leading = 14
+    canvas.move_text_cursor(offset: [72, top_margin])
+    y = top_margin
+  end
+
+  canvas.show_glyphs_only(font.decode_utf8(line.rstrip!))
+  canvas.move_text_cursor
+  y -= 14
+end
+~~~
+
+The bottleneck is at the bottom where each line gets decoded into glyph objects (`font.decode_utf8`)
+and the characters' glyphs are shown (`canvas.show_glyphs_only`).
+
+There is nothing specific here regarding TrueType fonts. The `font` object either represents one of
+the built-in PDF fonts like 'Times Roman' or a supplied TrueType font. The methods in either version
+are very similar.
+
+The `canvas.show_glyphs_only` method of the canvas is also font-agnostic, calling `font.encode` to
+encode a certain glyph into the needed PDF content stream operator representation.
+
+What's more is that the two font methods are using cached values as much as possible. I.e. once a
+glyph is created for a certain UTF-8 character, it is re-used. And once a glyph is encoded, it
+doesn't need to be encoded again.
+
+So from the first look at it there shouldn't have been much difference, performance-wise, when using
+a TrueType font instead of built-in font. But there was, as the benchmark results showed:
+
+~~~
+|--------------------------------------------------------------------|
+|                              ||    Time |     Memory |   File size |
+|--------------------------------------------------------------------|
+| hexapdf     | 1x             |    557ms |  34.160KiB |     452.598 |
+|--------------------------------------------------------------------|
+| hexapdf     | 5x             |  1.891ms |  45.244KiB |   2.258.904 |
+|--------------------------------------------------------------------|
+| hexapdf     | 10x            |  3.754ms |  57.364KiB |   4.517.825 |
+|--------------------------------------------------------------------|
+| hexapdf     | 1x ttf         |    634ms |  33.044KiB |     549.522 |
+|--------------------------------------------------------------------|
+| hexapdf     | 5x ttf         |  2.335ms |  48.908KiB |   2.687.124 |
+|--------------------------------------------------------------------|
+| hexapdf     | 10x ttf        |  4.693ms |  63.568KiB |   5.360.947 |
+|--------------------------------------------------------------------|
+~~~
+
+The text file used by the benchmark is the Project Gutenberg text of Homer’s Odyssey (contains about
+12.000 lines and about 700.000 characters). The "1x", "5x" and "10x" indicators show the number of
+times the text was output.
+
+For the "10x" version the TrueType benchmark ran about 25% slower than the one with the built-in
+PDF font. Some of the difference can be attributed to the need of subsetting the TrueType font and
+embedding it in the PDF. Also, when looking at the file sizes there is a difference of about 820KiB.
+This is because each glyph is encoded using two bytes in the TrueType version and only one byte in
+the built-in PDF font version. So the serializer also has more work to do.
+
+But still, it felt a bit off...
+
+
+## Investigating the Cause
+
+As I have [written before] development of HexaPDF is done in a memory and performance conscious way.
+So most parts of HexaPDF are already heavily optimized with respect to those regards. The next
+step was to find out the cause - it was time to unpack the trusty profilers!
+
+
+### Try 1 - Run-time Profiling
+
+Since the TrueType version was markedly slower my first thought was that there was some performance
+problem. This is where [ruby-prof] shines! It helps us to find out which methods are called how many
+times and how long processing took in each method.
+
+I have the following simple script that can just be required and it automatically runs ruby-prof:
+
+~~~ ruby
+BEGIN {
+  require 'ruby-prof'
+  $profile = RubyProf::Profile.new(measure_mode: RubyProf::WALL_TIME)
+  $profile.start
+}
+
+END {
+  result = $profile.stop
+  RubyProf::GraphHtmlPrinter.new(result).print(File.open('ruby-prof.graph.html', 'w+'), min_percent: 1)
+}
+~~~
+
+The script creates an output file `ruby-prof.graph.html` which contains all the information we need
+to pin-point performance-hungry method.
+
+I ran the benchmark together with this script, once using a built-in font and once using a TrueType
+font. The results, alas, were disappointing. The time spent in the top methods as well as the number
+of calls was nearly identical. So there wasn't really a clue there.
+
+If a run-time profiler doesn't show much difference, maybe a look at the memory consumption and the
+number of created objects helps.
+
+
+### Try 2 - Memory Profiling
+
+There are [several][memprof] [great][stackprof] memory profilers available. Most often, however, I
+use the [AllocationTracer] gem for this task.
+
+As with ruby-prof I have a small script that can just be required:
+
+~~~ ruby
+BEGIN {
+require 'set'
+require 'forwardable'
+require 'allocation_tracer'
+
+ObjectSpace::AllocationTracer.setup(%i{path line type})
+ObjectSpace::AllocationTracer.trace
+}
+
+
+END {
+begin
+  results = ObjectSpace::AllocationTracer.stop
+  results.reject {|k, v| v[0] < 10}.sort_by{|k, v| [v[0], k[0]]}.each do |k, v|
+    $stderr.puts "#{k[0]}:#{k[1]} - #{k[2]} - #{v[0]}"
+  end
+  $stderr.puts "Sum: " + results.inject(0) {|sum, (k,v)| sum + v[0]}.to_s
+  pp ObjectSpace::AllocationTracer.allocated_count_table
+  pp :total => ObjectSpace::AllocationTracer.allocated_count_table.values.inject(:+)
+rescue
+end
+}
+~~~
+
+The script outputs the location, type and count of created objects, as well as a summary at the end.
+
+I ran the benchmark again, together with this script and for both versions. And... *eureka*! The
+non-TrueType version allocated around 1.679 million objects whereas the TrueType version allocated
+around 2.390 million objects. And the detailed output of the TrueType result also showed us where
+this happened:
+
+~~~
+/home/thomas/hexapdf/lib/hexapdf/serializer.rb:272 - T_MATCH - 202480
+/home/thomas/hexapdf/lib/hexapdf/serializer.rb:270 - T_STRING - 208762
+/home/thomas/hexapdf/lib/hexapdf/serializer.rb:272 - T_STRING - 567231
+~~~
+
+The non-TrueType version only had the second line (as last line, so with the most allocations) and
+the other two added up to a bit more than the difference in allocated objects.
+
+Now I knew where to look! Following is the code for the method in question, with one irrelevant
+statement removed:
+
+~~~ ruby
+def serialize_string(obj)
+  obj.gsub!(/[()\\\r]/n, STRING_ESCAPE_MAP)
+  "(#{obj})"
+end
+~~~
+
+This method serializes a string into the format used by the PDF spec. The first line was the culprit
+allocating the many String and Match objects. It replaces all special characters with
+backslash-escaped versions using the `STRING_ESCAPE_MAP` hash.
+
+This meant that, somehow, the TrueType version generated many strings for which `String#gsub!`
+needed to do something, i.e. ones that included a special character.
+
+
+## Finding the Root Cause
+
+The next obvious step was to look for font related code that generates many strings for the
+benchmark. This happens during text output in the `canvas.show_glyphs_only` method. As mentioned
+before this method delegates to `font.encode` for retrieving the character codes that get put into a
+PDF content stream.
+
+Here is the relevant method:
+
+~~~ ruby
+def encode(glyph)
+  (@encoded_glyphs[glyph.id] ||=
+    begin
+      if glyph.kind_of?(InvalidGlyph)
+        raise HexaPDF::Error, "Glyph for #{glyph.str.inspect} missing"
+      end
+      if @subsetter
+        [[@subsetter.use_glyph(glyph.id)].pack('n'), glyph]
+      else
+        [[glyph.id].pack('n'), glyph]
+      end
+    end)[0]
+end
+~~~
+
+This method takes a glyph object and returns the character code that is needed for the respective
+PDF text showing operators. As the HexaPDF default is to subset TrueType fonts,
+`@subsetter.use_glyph(glyph.id)` is invoked and returns the mapped glyph index for the given glyph.
+The returned glyph index is just packed into two bytes and returned.
+
+As there was not further clue here I went further down the rabbit hole and inspected the
+`#use_glyph` method of the subsetter class:
+
+~~~ ruby
+def use_glyph(glyph_id)
+  return @glyph_map[glyph_id] if @glyph_map.key?(glyph_id)
+  @last_id += 1
+  @glyph_map[glyph_id] = @last_id
+end
+~~~
+
+The method returns an already mapped glyph index or, if not already mapped, increases the counter
+for the last used glyph index, stores it for the given glyph index and returns it. Not shown is that
+the initial `@last_id` value is 0.
+
+And here I found the root cause: The counter was increased for every newly encountered glyph. One of
+those glyphs would be mapped to 13 (if at least thirteen different glyphs were used which is the
+usual case) and this is the decimal value for `\r` and one of the special characters that needs to
+be escaped! The other special characters have the decimal values 40, 41 and 92. So we can assume
+that in most cases three glyphs are mapped to strings that need to be escaped when serialized.
+
+
+## Implementing a Solution
+
+Now that I knew the *why* I needed to find a solution.
+
+My first instinct was to set the initial `@last_id` value to 93. Then the problematic values would
+never be encountered. However, it turned out that making the necessary adjustments for this to
+create a valid PDF font object was not that easy.
+
+Skipping the problematic values was also not an option as that would again mean adjustments in other
+places. But what if we made sure that the problematic values were just never used?
+
+The solution I came up with is to use invalid keys for the `@glyph_map` hash whenever a problematic
+value is reached:
+
+~~~ ruby
+if @last_id == 13 || @last_id == 40 || @last_id == 41 || @last_id == 92
+  @glyph_map[:"s#{@last_id}"] = @last_id
+  @last_id += 1
+end
+~~~
+
+These invalid keys are then always specially handled in the same manner as the glyph index 0 which
+represents an undefined glyph. See [the commit] for all details of the change.
+
+
+## Benchmark Results
+
+After implementing the changes I ran the memory profiler again and the number of allocated objects
+went down to about 1.680 million. That looked promising from a memory point of view. However, memory
+savings not always translate into time savings.
+
+So I also ran the benchmarks again:
+
+~~~
+|--------------------------------------------------------------------|
+|                              ||    Time |     Memory |   File size |
+|--------------------------------------------------------------------|
+| hexapdf     | 1x             |    572ms |  34.680KiB |     452.598 |
+|--------------------------------------------------------------------|
+| hexapdf     | 5x             |  1.840ms |  45.352KiB |   2.258.904 |
+|--------------------------------------------------------------------|
+| hexapdf     | 10x            |  3.504ms |  57.464KiB |   4.517.827 |
+|--------------------------------------------------------------------|
+| hexapdf     | 1x ttf         |    542ms |  33.540KiB |     546.390 |
+|--------------------------------------------------------------------|
+| hexapdf     | 5x ttf         |  2.099ms |  43.600KiB |   2.670.953 |
+|--------------------------------------------------------------------|
+| hexapdf     | 10x ttf        |  4.016ms |  63.584KiB |   5.328.382 |
+|--------------------------------------------------------------------|
+~~~
+
+That also looked better! The TrueType benchmark of the "10x" version was now only about 14% slower
+than the one with the built-in PDF font.
+
+
+## Conclusion
+
+Most optimizations I already did for HexaPDF involved things like in-place modifications of strings,
+i.e. using better tools that Ruby provides.
+
+In this case, however, the solution to the performance problem was a bit unusual in that we actually
+had to use deeper TrueType font and PDF format knowledge to modify how strings were created in the
+first place.
+
+If such a modification was done in a general purpose font handling library, it would probably not be
+merged. However, HexaPDF includes its own font handling library because of such reasons.
+
+
+
+[written before]: https://gettalong.org/blog/2017/memory-conscious-programming-in-ruby.html
+[ruby-prof]: https://ruby-prof.github.io/
+[memprof]: https://github.com/SamSaffron/memory_profiler
+[stackprof]: https://github.com/tmm1/stackprof
+[AllocationTracer]: https://github.com/ko1/allocation_tracer
+[the commit]: https://github.com/gettalong/hexapdf/commit/cdb87239e95f638d4eca19f503674670c55b3586
