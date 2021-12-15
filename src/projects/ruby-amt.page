@@ -1,6 +1,6 @@
 ---
 title: ruby-amt
-description: Library for controlling Intel AMT devies via SOAP
+description: Library for controlling Intel AMT devices via SOAP
 rubygem: true
 homepage: http://ruby-amt.rubyforge.org
 image: ruby-amt.jpg
