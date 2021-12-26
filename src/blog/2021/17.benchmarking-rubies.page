@@ -1,0 +1,322 @@
+---
+title: Benchmarking Ruby 2.5 to 3.1
+description: The yearly benchmarking Ruby post
+feature-image: speed.jpg
+created_at: 2021-12-26 15:55:00 +01:00
+--- name:teaser
+
+This is another Ruby comparison benchmark, in the tradition of [2016], [2017] and [2020]. This
+christmas [Ruby 3.1.0] was released, featuring the brand-new YJIT just in time compiler.
+[Pre-liminary benchmarks][tweet] showed noticeable performance benefits for [HexaPDF], so let's see
+what the final version brings.
+
+[HexaPDF]: https://hexapdf.gettalong.org
+[2016]: ../2016/ruby24-performance-looking-good.html
+[2017]: ../2017/benchmarking-ruby-2-5.html
+[2020]: ../2020/benchmarking-rubies.html
+[Ruby 3.1.0]: https://www.ruby-lang.org/en/news/2021/12/25/ruby-3-1-0-released/
+[tweet]: https://twitter.com/_gettalong/status/1442964424130768896
+
+--- name:content
+
+## The Benchmark Setup
+
+I will be using the same applications/libraries as [last time][2020] (look there if you need more
+details): [HexaPDF], [kramdown] and [geom2d].
+
+The adapted benchmarking scripts are as follows:
+
+1. HexaPDF
+
+   The following commands were excecuted in the `benchmark/` directory:
+
+   ~~~
+   ./rubies.sh "2.5.7 2.6.9 2.7.5 3.0.3 3.1.0 3.1.0m 3.1.0y" optimization -b hexapdf
+   ./rubies.sh "2.5.7 2.6.9 2.7.5 3.0.3 3.1.0 3.1.0m 3.1.0y" raw_text -b hexapdf
+   ./rubies.sh "2.5.7 2.6.9 2.7.5 3.0.3 3.1.0 3.1.0m 3.1.0y" line_wrapping -b hexapdf
+   ~~~
+
+   A Ruby version with an appended "m" tells the script to activate MJIT, one with "y" to activate
+   YJIT.
+
+2. kramdown
+
+   The following command was excecuted in the kramdown repository directory:
+
+   ~~~
+   ./benchmark/benchmark-rubies.sh "2.5.7 2.6.9 2.7.5 3.0.3 3.1.0 3.1.0m 3.1.0y"
+   ~~~
+
+   A Ruby version with an appended "m" tells the script to activate MJIT, one with "y" to activate
+   YJIT.
+
+3. geom2d
+
+   This benchmark is done using the superb [benchmark-driver] gem.
+
+   ~~~
+   benchmark-driver benchmark.yaml --rbenv "2.5.7;2.6.9;2.7.5;3.0.3;3.1.0;3.1.0 --mjit;3.1.0 --yjit" -o record
+   benchmark-driver benchmark_driver.record.yml -o gruff
+   ~~~
+
+[2020]: ../2020/benchmarking-rubies.html#three-real-world-benchmarks
+[HexaPDF]: https://hexapdf.gettalong.org
+[kramdown]: https://kramdown.gettalong.org
+[geom2d]: https://github.com/gettalong/geom2d
+[benchmark-driver]: https://github.com/benchmark-driver/benchmark-driver
+
+
+## Results
+
+### HexaPDF
+
+The images are SVG files, click on them to open them in a new window to view details. The raw data
+is already the post-processed data ready for gnuplot-ingestion, with the time in milliseconds and
+the memory in kilobytes.
+
+#### Optimization Benchmark
+
+Note: There are six groups (different files `a.pdf` to `f.pdf`) of four benchmarks (different
+hexapdf invocations; except for `f.pdf` which only has three because the CSP mode would take
+*really* long) with each benchmark having seven columns (different Ruby versions).
+
+[![HexaPDF optimization benchmark](assets/hexapdf-optimization.svg)](assets/hexapdf-optimization.svg){: target="_blank"}
+{:.image.fit}
+
+~~~
+Time "hexapdf 2.5.7" "hexapdf 2.6.9" "hexapdf 2.7.5" "hexapdf 3.0.3" "hexapdf 3.1.0" "hexapdf 3.1.0-mjit" "hexapdf 3.1.0-yjit"
+"a.pdf" 222 193 298 226 183 471 325
+"C a.pdf" 166 153 141 159 163 394 318
+"CS a.pdf" 163 154 147 162 178 402 344
+"CSP a.pdf" 156 162 158 172 180 387 359
+"b.pdf" 652 627 629 665 684 1058 737
+"C b.pdf" 605 634 667 669 703 1037 754
+"CS b.pdf" 727 741 745 802 798 1059 850
+"CSP b.pdf" 4141 4767 5072 4864 4998 0 4099
+"c.pdf" 1163 1178 1204 1274 1246 1492 1178
+"C c.pdf" 1156 1260 1344 1358 1365 1750 1192
+"CS c.pdf" 1300 1385 1477 1461 1535 0 1344
+"CSP c.pdf" 4533 4883 5234 5208 5397 0 4268
+"d.pdf" 2819 2845 2793 3025 2941 3831 2540
+"C d.pdf" 2714 2780 2811 3000 3009 4075 2532
+"CS d.pdf" 3023 3076 3162 3324 3447 4398 2783
+"CSP d.pdf" 2874 3074 2976 3111 3095 4822 2630
+"e.pdf" 575 581 531 572 578 710 673
+"C e.pdf" 608 640 660 686 697 904 790
+"CS e.pdf" 636 678 680 726 721 902 825
+"CSP e.pdf" 16825 18422 19527 20789 20505 23846 17253
+"f.pdf" 33949 34068 33737 35586 36043 41606 27994
+"C f.pdf" 37793 38077 37730 39154 40388 46554 29839
+"CS f.pdf" 44430 44506 45118 45257 48361 0 35573
+"CSP f.pdf" 0 0 0 0 0 0 0
+
+
+Memory "hexapdf 2.5.7" "hexapdf 2.6.9" "hexapdf 2.7.5" "hexapdf 3.0.3" "hexapdf 3.1.0" "hexapdf 3.1.0-mjit" "hexapdf 3.1.0-yjit"
+"a.pdf" 15540 28152 28296 27380 28132 44620 293860
+"C a.pdf" 15792 28252 28332 27536 28172 44952 294052
+"CS a.pdf" 16264 28772 28472 27752 28648 44936 294300
+"CSP a.pdf" 16632 29336 29292 28520 29228 45052 295064
+"b.pdf" 35016 42784 46352 46016 46572 59792 312352
+"C b.pdf" 33884 44772 46616 46184 47516 59688 313140
+"CS b.pdf" 38200 47676 47468 49020 50344 59896 316500
+"CSP b.pdf" 49040 55124 58024 57848 60796 0 327324
+"c.pdf" 34224 52548 51652 48920 49300 59940 314104
+"C c.pdf" 37744 47796 50580 49984 49912 60072 315448
+"CS c.pdf" 40120 51608 52548 52732 52596 0 317996
+"CSP c.pdf" 59140 69204 66496 68760 70772 0 336448
+"d.pdf" 65220 77980 76660 76364 72688 73116 338472
+"C d.pdf" 57904 74148 73436 75120 76108 77096 341764
+"CS d.pdf" 58220 75648 77044 75496 75932 76432 341316
+"CSP d.pdf" 78812 85504 84528 86348 89068 90924 353380
+"e.pdf" 52316 57112 54956 49764 51660 51900 317468
+"C e.pdf" 63492 86952 91124 88324 92276 92588 359600
+"CS e.pdf" 89928 83532 97708 83388 104044 104044 369756
+"CSP e.pdf" 160284 143684 158604 157276 156308 165656 418132
+"f.pdf" 490684 510832 483032 485868 511396 514828 763428
+"C f.pdf" 517716 488540 527900 535080 572200 576408 813928
+"CS f.pdf" 616200 578648 604328 617584 616688 0 879312
+"CSP f.pdf" 0 0 0 0 0 0 0
+~~~
+
+#### Raw Text Benchmark
+
+[![HexaPDF raw text benchmark](assets/hexapdf-raw_text.svg)](assets/hexapdf-raw_text.svg){: target="_blank"}
+{:.image.fit}
+
+~~~
+Time "hexapdf 2.5.7" "hexapdf 2.6.9" "hexapdf 2.7.5" "hexapdf 3.0.3" "hexapdf 3.1.0" "hexapdf 3.1.0-mjit" "hexapdf 3.1.0-yjit"
+"1x" 466 508 514 533 547 663 627
+"5x" 1755 1908 1917 2118 2076 0 1842
+"10x" 3356 3838 3792 3975 3821 0 3340
+"1x ttf" 498 565 558 597 578 903 671
+"5x ttf" 2053 2205 2278 2257 2283 0 2103
+"10x ttf" 4036 4269 4228 4353 4678 0 3879
+
+
+Memory "hexapdf 2.5.7" "hexapdf 2.6.9" "hexapdf 2.7.5" "hexapdf 3.0.3" "hexapdf 3.1.0" "hexapdf 3.1.0-mjit" "hexapdf 3.1.0-yjit"
+"1x" 24564 36420 35748 34852 33780 47896 298680
+"5x" 37312 47088 45824 45668 48368 0 312764
+"10x" 48732 58440 57240 57924 61528 0 325368
+"1x ttf" 23544 33580 34232 33672 33672 49184 298680
+"5x ttf" 36120 48876 44820 43888 46436 0 310888
+"10x ttf" 58572 62688 62604 64524 63100 0 325932
+~~~
+
+
+#### Line Wrapping Benchmark
+
+[![HexaPDF line wrapping benchmark](assets/hexapdf-line_wrapping.svg)](assets/hexapdf-line_wrapping.svg){: target="_blank"}
+{:.image.fit}
+
+~~~
+Time "hexapdf 2.5.7" "hexapdf 2.6.9" "hexapdf 2.7.5" "hexapdf 3.0.3" "hexapdf 3.1.0" "hexapdf 3.1.0-mjit" "hexapdf 3.1.0-yjit"
+"L 400" 1217 1283 1333 1290 1363 1679 1322
+"C 400" 1513 1664 1775 1516 1579 1729 1482
+"L 200" 1334 1400 1503 1503 1534 1733 1434
+"C 200" 1679 1875 2000 1726 1722 2157 1564
+"L 100" 1545 1636 1790 1709 1727 2147 1552
+"C 100" 2073 2130 2329 1967 2086 2434 1835
+"L 50" 2555 2750 2872 2757 2684 3072 2259
+"C 50" 3300 3578 3668 3278 3296 3924 2724
+"L 400 ttf" 1254 1365 1395 1394 1448 0 1355
+"C 400 ttf" 1613 1738 1810 1577 1569 1890 1539
+"L 200 ttf" 1518 1514 1622 1528 1577 0 1389
+"C 200 ttf" 1867 1965 1975 1787 1783 0 1667
+"L 100 ttf" 1881 1763 1854 1847 1928 0 1616
+"C 100 ttf" 2322 2356 2549 2229 2273 0 1895
+"L 50 ttf" 4430 4708 4804 4559 4531 0 3960
+"C 50 ttf" 5466 5996 5732 5565 5489 6522 4710
+
+
+Memory "hexapdf 2.5.7" "hexapdf 2.6.9" "hexapdf 2.7.5" "hexapdf 3.0.3" "hexapdf 3.1.0" "hexapdf 3.1.0-mjit" "hexapdf 3.1.0-yjit"
+"L 400" 79868 106940 91156 95348 101444 101896 367380
+"C 400" 85836 97632 91032 102984 94980 95248 362252
+"L 200" 84244 100584 104232 89136 97136 97868 363504
+"C 200" 78540 92620 87440 95608 95192 95832 362624
+"L 100" 81896 97384 98992 87036 93264 93848 359116
+"C 100" 82184 91844 99844 91052 91324 91940 358584
+"L 50" 183380 177796 217552 232260 234476 231672 497100
+"C 50" 181212 174596 199768 217608 232100 204324 488116
+"L 400 ttf" 77720 103380 104088 103356 97220 0 363836
+"C 400 ttf" 82780 108436 108464 99456 105296 105764 372432
+"L 200 ttf" 84904 101268 93068 94876 100204 0 366180
+"C 200 ttf" 83992 102280 102124 100048 98804 0 365992
+"L 100 ttf" 87404 100348 92292 91812 95940 0 361592
+"C 100 ttf" 85068 100708 100148 96804 96468 0 363424
+"L 50 ttf" 267952 247984 278100 275644 273772 0 545924
+"C 50 ttf" 300152 264944 275396 267236 293740 277408 546472
+~~~
+
+#### Comments
+
+* Run time generally gets a bit worse each time for each newer version of Ruby, with 2.5.7 most
+  often being the fastest except for Ruby 3.1.0+YJIT.
+
+* Ruby 3.1.0+MJIT is the slowest one, often being much slower than 3.1.0.
+
+* **Ruby 3.1.0+YJIT** performs on par with Ruby 2.5.7 for most benchmarks but is much faster when
+  the benchmark takes longer. E.g. the optimization benchmark on `f.pdf` takes around 34 seconds for
+  2.5.7, but only around 28 seconds for 3.1.0+YJIT.
+
+  While the raw text benchmark generates many small (string) objects and doesn't benefit much from
+  YJIT, the line wrapping benchmark needs to do much more computations and sees a big performance
+  improvement for the longer running benchmarks.
+
+  The drawback of using YJIT is its high memory usage, consuming an additional 256MB of RAM by
+  default. See below for how to change the memory used by YJIT and how that affects its performance.
+
+* Ruby 3.1.0+MJIT has bug with respect to Zlib which affects HexaPDF because Zlib is used for
+  deflate streams. This is the reason why there is often no data for that column.
+
+[zlibbug]: https://bugs.ruby-lang.org/issues/18058
+
+
+### kramdown
+
+![kramdown benchmark](assets/kramdown.png)
+
+~~~
+#	ruby-2.5.7p206 ||	ruby-2.6.9p207 ||	ruby-2.7.5p203 ||	ruby-3.0.3p157 ||	ruby-3.1.0p0 ||	ruby-3.1.0p0-mjit ||	ruby-3.1.0p0-yjit ||
+256	0.70620	0.69444	0.65407	0.73346	0.71877	0.74956	0.65734
+512	1.65357	1.60639	1.39829	1.54884	1.56712	1.57714	1.43944
+1024	3.37941	3.48940	3.16486	3.33241	3.30570	3.33736	3.05656
+~~~
+
+While all Ruby versions perform very similar, Ruby+YJIT clearly takes the lead in this benchmark.
+
+
+### geom2d
+
+The bars represent instructions per seconds, so larger bars are better.
+
+![geom2d small benchmark](assets/geom2d.png)
+{:.image.fit}
+
+~~~
+Comparison:
+                            small
+        3.1.0 --yjit:      7538.8 i/s
+               2.6.9:      4760.6 i/s - 1.58x  slower
+               3.0.3:      4519.3 i/s - 1.67x  slower
+               2.5.7:      4513.3 i/s - 1.67x  slower
+               3.1.0:      4358.0 i/s - 1.73x  slower
+               2.7.5:      4134.1 i/s - 1.82x  slower
+        3.1.0 --mjit:      4000.9 i/s - 1.88x  slower
+~~~
+
+Like last time Ruby+MJIT performed worst but, as expected, Ruby+YJIT performs best in this largely
+CPU-bound benchmark.
+
+
+## Ruby+YJIT Memory Tuning
+
+The drawback to using YJIT is its memory usage. YJIT uses 256MB of RAM for its purposes by default
+but that can be tuned using the `--yjit-exec-mem-size` option.
+
+To see the effects of different executable memory sizes, I tested again with HexaPDF and geom2d:
+
+~~~
+|--------------------------------------------------------------------|
+| Optimization                 ||    Time |     Memory |   File size |
+|--------------------------------------------------------------------|
+| 3.1.0 no YJIT | CSP e.pdf    | 20.784ms | 163.532KiB |  21.186.414 |
+| YJIT 256MB    | CSP e.pdf    | 16.242ms | 427.072KiB |  21.186.414 |
+| YJIT 128MB    | CSP e.pdf    | 16.150ms | 297.616KiB |  21.186.416 |
+| YJIT  64MB    | CSP e.pdf    | 16.414ms | 232.044KiB |  21.186.415 |
+| YJIT  32MB    | CSP e.pdf    | 16.312ms | 196.820KiB |  21.186.414 |
+| YJIT  16MB    | CSP e.pdf    | 16.267ms | 182.744KiB |  21.186.414 |
+|--------------------------------------------------------------------|
+| Line wrapping                ||    Time |     Memory |   File size |
+|--------------------------------------------------------------------|
+| 3.1.0 no YJIT | L 50         |  2.717ms | 219.740KiB |     569.798 |
+| YJIT 256MB    | L 50         |  2.234ms | 474.148KiB |     569.797 |
+| YJIT 128MB    | L 50         |  2.171ms | 360.116KiB |     569.797 |
+| YJIT  64MB    | L 50         |  2.158ms | 283.852KiB |     569.798 |
+| YJIT  32MB    | L 50         |  2.129ms | 258.600KiB |     569.797 |
+| YJIT  16MB    | L 50         |  2.125ms | 232.604KiB |     569.797 |
+|--------------------------------------------------------------------|
+~~~
+
+![geom2d small benchmark](assets/geom2d-yjit-mem.png)
+{:.image.fit}
+
+In all three cases YJIT performs at a similar level regardless of whether it has 16MB or up to 256MB
+of memory for its purpose; and it is faster than Ruby 3.1.0 without YJIT. **I will gladly forteit
+16MB of memory in exchange for 20% (HexaPDF) to 50% (geom2d) better performance!**
+
+Note that in both benchmarks the code size that can be optimized is not that large, less than 10,000
+lines in HexaPDF's case. So this might be different for e.g. big Rails applications.
+
+
+## Conclusion
+
+Ruby 3.1.0 brings with YJIT another JIT to the runtime and **this one brings benefits for all kinds
+of programs, not just for very CPU intensive ones**. The peformance benefit is sometimes very large,
+as can be seen in the geom2d benchmark.
+
+One should also check whether the default of 256BM of RAM for YJIT is necessary and tune that value.
+Giving YJIT as low as 16MB of RAM turned out to be as good as 256MB for the benchmarked
+applications/libraries
+
+After finding last year that MJIT doesn't perform so well with regular applications, I'm *very*
+excited that YJIT works so well and I will be following it's development closely!
