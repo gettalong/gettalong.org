@@ -1,0 +1,316 @@
+---
+title: 10 Years of HexaPDF
+description: A look at the last 10 years of implementing HexaPDF and creating a business around it
+feature-image: celebration.jpg
+created_at: 2024-10-26 22:55:00 +02:00
+--- name:teaser
+
+I have been implementing [HexaPDF] for the last 10 years now and just released [version 1.0.0]. It
+all started due to missing features in an existing library (like with [kramdown] and so many other
+things) and an odd desire to implement a largish specification from scratch. Little did I know what
+that would entail...
+
+[hexapdf]: https://hexapdf.gettalong.org
+[version 1.0.0]: https://hexapdf.gettalong.org/news/2024/hexapdf-1-0-0.html
+[kramdown]: https://kramdown.gettalong.org
+
+--- name:content
+
+## The Beginnings (around September 2013)
+
+It all started when I was creating a website where I wanted to output PDFs next to HTML from the
+source kramdown document. At that time the only meaningful way to create PDFs was to use the
+fantastic [Prawn library][prawn]. Luckily someone (me) had written a [kramdown converter] based on
+Prawn for creating PDFs from kramdown sources.
+
+While this worked quite well there were a few things that bothered me. One thing was that creating a
+PDF document was rather manual, with no real support for different paragraph types or advanced,
+automatic layout (think e.g. image next to text with the text automatically flowing around the
+image).
+
+Another thing was that printing the created PDFs sometimes failed with certain printers, producing
+garbage output.
+
+I contributed to Prawn and tried to fix a few things. However, enhancing Prawn was not as easy or
+straight-forward as I thought it would be.
+
+So I searched for other solutions to work with and create PDFs in Ruby. But no real solution existed
+that had everything I wanted. There were a few rubygems that could work with PDFs but none was
+fully-featured and they all implemented only few parts of the PDF specification.
+
+During this exploration phase I found that the PDF specification itself was freely available,
+although it is an ISO standard (ISO 32000-1). Normally one would need to pay ISO to get a standards
+document. But since ISO 32000-1 is more or less an ISO-formatted version of Adobe's PDF 1.7
+standards document, Adobe and ISO came to the agreement to have the ISO version freely available on
+Adobe's website. While the newest version ISO 32000-2:2020 was initially not freely available, the
+PDF Association made a deal with ISO and a few big players in the PDF world now sponsor the [freely
+available ISO 32000-2:2020 specification, a.k.a. PDF 2.0][pdf20].
+
+One now needs to know that I had an odd desire for implementing a specification, any specification
+really. Maybe this desire was born out of the frustration of having no single Markdown specification
+to rely on when implementing kramdown. And therefore having to deal with the quirks of different
+Markdown implementations (mind you, PDF has a specification but if one implements just that *many*
+PDF files won't be readable - so much for a standard).
+
+Working on my PDF generation problem, finding the PDF specification and having this odd desire to
+implement a specification all came together at the right time. After reading the PDF specification
+front to back the idea to implement a fully-featured PDF library for Ruby from scratch didn't seem
+far-fetched anymore.
+
+Additionally, the thought of maybe later commercializing the library popped into my mind. After all,
+there was no fully-featured pure Ruby PDF library available. And every time I talked with my parents
+of how I spend a chunk of my spare time for years implementing a library ([kramdown]) that is used
+by tens of thousands of people world-wide as well as companies and governments without being paid
+for it, they couldn't wrap their head around it. Having a commercially available library would fix
+that, too.
+
+And so I went to work.
+
+[prawn]: https://prawnpdf.org/
+[kramdown converter]: https://github.com/gettalong/kramdown/commit/6be94f53faf39dd3d21c3c292dfd9f08232bc3b0
+[pdf20]: https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/
+[kramdown]: https://kramdown.gettalong.org
+
+
+## The Dawn of HexaPDF (around September 2014)
+
+After reading the PDF specification it was clear that the best place to start with the library was
+the parsing and serialization functionality.
+
+This functionality is self-contained and only about 50 pages of the specification, is fundamental
+for the rest, needs careful thinking about the data structures, can be implemented incrementally,
+and provides instant gratification.
+
+I was working on the PDF library on and off in my spare time and made the first git commit on
+September 3rd 2014.
+
+One thing I knew from the start was that the library needed to be fast and memory-conscious. Many
+PDF documents might be smallish but there are also ones with hundreds of MiB and though Ruby is
+fast, it is not C-level fast. Luckily I already had experience in this area due to developing
+kramdown. To ensure I got the most out of the code I added a benchmark harness early on.
+
+One of the benchmarks uses the HexaPDF CLI application and tests HexaPDF's ability to read, optimize
+and write PDFs against other CLI tools, even one written in C++. And it turns out that HexaPDF
+creates the smallest files in nearly all cases while being in the same ballbark performance-wise
+(i.e. only about 1.5x to 2x slower with current Ruby plus YJIT) as the C++ tool.
+
+Another thing that was imported to me was - and still is - an extensive test suite with 100% code
+coverage that runs in a reasonable time. Even now the whole test suite finishes in under 3 seconds.
+
+During this initial phase I didn't push any code to Github. I knew what I wanted to do and in which
+order I needed to do that. There wasn't any benefit of publishing it yet. So I worked on HexaPDF
+regularly in my spare time, implementing new features and fixing bugs. There is some more
+information about the design of HexaPDF on the [slides of a vienna.rb talk in
+2018][talk2018-design].
+
+After the basics of reading and writing a PDF document were working, I implemented support for
+cross-reference and object streams, support for encrypted PDFs, support for JPEG and PNG images (so
+I needed to deal with PNG spec, too) as well as support for drawing graphics on pages.
+
+About a year later in October 2015 the EuRuKo conference took place in Salzburg, Austria. It was a
+great conference. One could propose lightning talk titles to be chosen by the crowd. I thought what
+the heck and offered to give a [lightning talk][talk2015] presenting HexaPDF. Alas, the talk was not
+chosen.
+
+[talk2015]: https://talks.gettalong.org/euruko2015/
+[talk2018-design]: https://talks.gettalong.org/2018-10-viennarb/
+
+
+## The Biggest Mistake (October 2016)
+
+The days went by and HexaPDF got more and more features and stability.
+
+I was focused on the implementation part and didn't really think about the public presentation
+part. This meant that there wasn't a website for HexaPDF, much less anything business-related.
+
+But HexaPDF itself came along nicely. And I had plans to go to the next EuRuKo in Sofia, Bulgaria,
+that was announced for September 2016.
+
+I did plan to go to EuRuKo but I didn't really plan farther ahead. Knowing that there would be a
+chance of giving a lightning talk, I thought that I would try again with one about HexaPDF.
+
+At the conference I again offered to give a talk about "Working with PDFs in Ruby" and this time it
+got selected. So, prepared as I were, I spent a part of the night finishing the slides and the talk.
+
+On the second day of the conference I gave my lightning talk about HexaPDF ([slides][talk2016] and
+[video of the talk][video2016]). The talk went rather well and I was approached by various people
+afterwards with specific questions about functionality and such.
+
+But I made a big mistake announcing HexaPDF and *not* releasing HexaPDF before that! This meant that
+the people being interested in having a look at it or maybe wanting to play around with it, couldn't
+do that. Talk about nipping it in the bud.
+
+Coming back from the conference I wanted to fix that mistake as soon as possible, to not lose
+steam. Therefore I created a [simple website][website2016], added examples and generally made sure
+to have something release-able.
+
+By October 26th 2016, eight years ago today, I released version 0.1.0 of HexaPDF and pushed the code
+to Github. HexaPDF was finally in the open.
+
+While there was some interest initially, it quickly waned. This was most probably due to the fact
+that HexaPDF uses the AGPL and not a permissive license like MIT. Most Ruby open source libraries at
+the time used a permissive license which allows integration into commercial applications. With AGPL
+this is not really possible.
+
+[talk2016]: https://talks.gettalong.org/euruko2016/
+[video2016]: https://youtu.be/WnlgKWCt8wQ?t=800
+[website2016]: https://web.archive.org/web/20161030093945/http://hexapdf.gettalong.org/index.html
+
+
+## The Next Mistake
+
+Why did I choose the AGPL for HexaPDF? Quite simple: It allows me to also distribute HexaPDF under a
+commercial license while restricting most companies from just using it under the AGPL but still
+enabling usage in open source software.
+
+And herein lies the next mistake: Providing HexaPDF under a license that essentially restricts usage
+in closed source software. And *not* providing an alternative commercial license for companies at
+the same time! Duh!
+
+But at first I didn't even realize this mistake since nobody seemed interested in commercial
+usage. How could they? HexaPDF was only available under the AGPL. Anybody coming across the library
+would probably immediately dismiss HexaPDF as a viable option. I was also a bit intimitated by the
+process of starting a company and therefore always post-poned it. Why do it when no one is
+interested?
+
+I first started realizing that there was *indeed* interest in using HexaPDF in commercial settings
+when people started mailing me in August 2017. One of them was from a little company called
+Shopify. But since no commercial license was available at that time, I could offer them...
+nothing. That, however, led me to look more seriously into starting a business.
+
+
+## Going Commercial (2018)
+
+While I had some theoretical knowledge of running a business in Austria due to my studies many years
+ago, that knowledge was quite old and mostly forgotten.
+
+Therefore I read the information on relevant websites, went to some seminars and found out what I
+neededed to do. By spring 2018 I had all the information I needed and officially started my
+business. Mind you, that was just the bare minimum formalities.
+
+Next I needed to find a payment processor and settled on [Paddle]. The integration into a static
+website was very easy (just a link) and nothing else was needed on my side (no server, no backend,
+nothing). Furthermore, they handle the complete subscription payment process including taxes and
+compliances. Essentially, they make it very easy to start a software business.
+
+The last thing I needed was the commercial license itself. For this I contacted a lawyer to draw up
+a commercial license.
+
+I knew that I wanted to have a dual-licensing scheme, i.e. the AGPL and a commercial license. By
+using this scheme it is possible to have the whole library under an open source license, in contrast
+to something like open core where only the basic parts are freely available.
+
+Moreover, I dislike unnecessary complexities with regard to licensing and locking a customer
+in. This is reflected in the fact that each HexaPDF license allows you to use HexaPDF in perpetuity,
+although not the latest version.
+
+Drawing up the commercial license took a while but then this last missing part was also done.
+
+In July 2018 I announced that HexaPDF was now available under a commercial license. And I hoped that
+some company was interested enough to actually buy a license. I contacted everybody that had
+e-mailed me before but sadly they all had already moved on.
+
+[Paddle]: https://www.paddle.com/
+
+
+## The First Sale (August 2018)
+
+In August 2018 there was another EuRuKo and this time it was held in Vienna where I live. I was able
+to have a poster on HexaPDF there which got more people to know about it. But something more
+important for me actually happened right before EuRuKo.
+
+You see, a [vienna.rb](https://ruby.wien/) meeting was scheduled the evening before EuRuKo, on
+August 23rd, and I had a [talk][talk2018] to give there. The space at MeisterLabs was filled and I
+was excited and nervous.
+
+A few minutes right before my talk my mobile phone's notification sound rang. I quickly looked at it
+and saw that the notification was due to some e-mails from Paddle. This piqued my curiosity and I
+looked at the e-mails. Turned out that somebody had actually bought HexaPDF licenses! This was my
+first sale and it made my quite happy as one can imagine.
+
+[talk2018]: https://talks.gettalong.org/2018-08-viennarb/talk.html
+
+
+## The Rest (2018 until now)
+
+After the first sale there was another one a few days later and then another one in
+December. Starting with 2019 more companies got interested and the number of customers slowly but
+steadily increased since then.
+
+I designed the business side of things so that it was as easy and simple as possible. This has the
+advantage that it doesn't take much time away from HexaPDF development itself and that it is also
+easy for customers to try out HexaPDF and then integrate it into their workflow.
+
+The only real pain point is when the credit card information for a subscription expires and the
+payment fails. Often times additional manual intervention is needed to reach the customer and alert
+them to the situation.
+
+The features of HexaPDF increased as well:
+
+* The document layout engine got better with nearly every release. It now supports tables, can be
+  applied to a single canvas and the support for fallback fonts makes creating documents from
+  external text sources easier.
+
+* The support for interactive forms (AcroForm) is now a very essential part of HexaPDF and used by
+  many companies.
+
+* One customer processes *tens of thousands of PDF files a week*. While comparing HexaPDF to other
+  tools for repairing PDFs, they found that HexaPDF already did better than the rest. We worked (and
+  still work) together to improve upon that.
+
+* Another big feature is the general support for digital signatures as well as support for PAdES
+  compatible ones. There will be additional improvements in this area in the coming months.
+
+* Optional content (a.k.a. layers) as well as outlines (a.k.a. bookmarks) are supported.
+
+* It is possible to create PDF/A conformant PDFs.
+
+While HexaPDF already supports quite a big chunk of the PDF specification, there is still much to
+do. For example, there are many types of annotations that are not yet supported and the document
+layout engine can't yet produce tagged PDFs. The PDF specification is also evolving and PDF 2.1 will
+bring new features that need to be implemented.
+
+This means that I won't run out of ideas and challenges to implement. Did I mention that my current
+backlog of to-do items counts more than 150 of them?
+
+
+## A Few Things I did Right
+
+While I certainly made some mistakes throughout this journey, I think I did a few things right.
+
+First of all I think that implementing HexaPDF was the right decision. For myself it provided lots
+of problems to solve which I really like. And it grew from a side project to an actual business.
+
+While there exist various pure Ruby PDF libraries, none has implemented as much of the PDF
+specification as HexaPDF. Having a mature and feature rich PDF library available is certainly a boon
+for the greater Ruby community, too.
+
+Business-wise I found out that my internal policy of answering (potential) customer e-mails as
+quickly as possible is very well received. It also helps that many customers are located in the
+Americas because I can answer them timely after my full time job in the evening.
+
+Another thing is my policy on how I provide support. It essentially boils down to me giving free
+support, not just for the people using the open source version but also for HexaPDF
+customers. HexaPDF is quite mature and stable and has quite extensive documentation. This means that
+most support requests can be solved quite fast. Those that can't nearly always lead to improvements
+in HexaPDF itself which I count as win-win situations (e.g. when a customer provides slightly
+invalid PDFs). If the required support is too much to handle for free, I clearly state it and the
+customer can decide whether to buy support hours.
+
+Deciding on Paddle as payment provider was also the right choice. They helped me out quite a few
+times by custom handling my business. Later on they introduced payment via invoice and wire
+transfer. Once I heard of it I immediately joined the beta and used it for the Unlimited License as
+companies really like to pay larger sums this way. Without that I probably would have missed out on
+a few but very important sales.
+
+All in all I'm quite happy at where I'm now.
+
+
+## Postscript: HexaPDF Timeline
+
+* September 2013: Idea and exploration phase
+* September 2014: First commit
+* October 2016: First public release and push to Github
+* July 2018: Availability of commercial licenses
+* August 2018: First customer
+* October 2024: Version 1.0.0 released
