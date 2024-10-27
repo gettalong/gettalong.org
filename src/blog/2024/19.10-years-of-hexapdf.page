@@ -94,7 +94,7 @@ and write PDFs against other CLI tools, even one written in C++. And it turns ou
 creates the smallest files in nearly all cases while being in the same ballbark performance-wise
 (i.e. only about 1.5x to 2x slower with current Ruby plus YJIT) as the C++ tool.
 
-Another thing that was imported to me was - and still is - an extensive test suite with 100% code
+Another thing that was important to me was - and still is - an extensive test suite with 100% code
 coverage that runs in a reasonable time. Even now the whole test suite finishes in under 3 seconds.
 
 During this initial phase I didn't push any code to Github. I knew what I wanted to do and in which
